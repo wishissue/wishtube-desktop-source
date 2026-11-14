@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en" data-theme="terminal">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src * data: blob:; media-src * blob: file:; connect-src * blob:; worker-src blob:; font-src 'self' data:">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>WishTube</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="bgshapes"><i></i><i></i><i></i></div>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true"><filter id="bit" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="0.33 0.33 0.33 0 0  0.33 0.33 0.33 0 0  0.33 0.33 0.33 0 0  0 0 0 1 0"/><feComponentTransfer><feFuncR type="discrete" tableValues="0 0 0 1 1 1"/><feFuncG type="discrete" tableValues="0 0 0 1 1 1"/><feFuncB type="discrete" tableValues="0 0 0 1 1 1"/></feComponentTransfer></filter></svg>
+  <header id="top"></header>
+  <div id="body"><nav id="rail"></nav><main id="view" tabindex="-1"></main></div>
+  <div id="overlay"></div>
+  <div id="toasts" role="status" aria-live="polite"></div>
+  <script src="vendor/hls.min.js"></script>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

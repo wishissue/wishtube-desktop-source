@@ -1,0 +1,45 @@
+{
+  "name": "wishtube-desktop",
+  "productName": "WishTube",
+  "version": "0.2.0",
+  "description": "Local-first open video client for Linux and Windows",
+  "author": "wishissue",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "main/main.cjs",
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test test/*.test.js",
+    "vendor": "node scripts/vendor.mjs",
+    "dist:linux": "npm run vendor && electron-builder --linux AppImage",
+    "dist:win": "npm run vendor && electron-builder --win portable nsis",
+    "dist": "npm run vendor && electron-builder --linux AppImage --win portable nsis"
+  },
+  "dependencies": {
+    "hls.js": "1.5.17"
+  },
+  "devDependencies": {
+    "electron": "33.2.1",
+    "electron-builder": "25.1.8"
+  },
+  "build": {
+    "appId": "app.wishtube.desktop",
+    "productName": "WishTube",
+    "directories": { "output": "dist", "buildResources": "build" },
+    "files": ["main/**", "renderer/**", "package.json"],
+    "asar": true,
+    "linux": {
+      "target": ["AppImage"],
+      "category": "AudioVideo",
+      "icon": "build/icon.png",
+      "artifactName": "WishTube-${version}-linux-x86_64.AppImage"
+    },
+    "win": {
+      "target": ["portable", "nsis"],
+      "icon": "build/icon.png",
+      "signAndEditExecutable": false,
+      "artifactName": "WishTube-${version}-win-x64.${ext}"
+    },
+    "nsis": { "oneClick": false, "allowToChangeInstallationDirectory": true }
+  }
+}
