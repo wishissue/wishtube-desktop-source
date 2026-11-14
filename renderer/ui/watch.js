@@ -5,16 +5,25 @@ import { pool } from '../rec/pool.js';
 import { sources } from '../sources/manager.js';
 import { parseChapters, SOURCES } from '../core/models.js';
 import { Player } from './player.js';
+import { browserPlayer } from './browserplayer.js';
 import { avatar, mini, go, watchPath, creatorPath, contextMenu, videoMenu } from './components.js';
 
 const prefs = { volume: 1 };
 
 export async function watch(root, { id }) {
-  let alive = true, player = null, related = [], v = state.known.get(id);
+  let alive = true, player = null, bp = null, related = [], v = state.known.get(id);
   if (!v) { root.append(h('div.page', h('div.empty', h('h2', 'Video not found'), h('p', 'It may have expired from the cache. Search for it again.'), h('button.btn.pri', { onclick: () => go('/') }, 'Back home')))); return () => {}; }
 
   const side = h('div.side'), player$ = h('div'), info = h('div'), page = h('div.watch', h('div', player$, info), side);
   root.append(page);
+  function openBrowser() {                                  // fallback: the provider's own page in a real browser view
+    if (bp) return;
+    if (player) { player.media.pause(); player.el.style.display = 'none'; } else clear(player$);
+    bp = browserPlayer(player$, v, { onBack: () => {
+      bp = null;
+      if (player) { player.el.style.display = ''; player.err?.remove(); player.spin.style.display = ''; player.load(0); player.el.focus({ preventScroll: true }); } else location.reload();
+    } });
+  }
   const refreshRelated = () => {
     const base = [...pool.videos, ...state.lib.history.slice(0, 80).map(x => x.video)].filter(x => state.settings.sources[x.source]);
     related = state.ranker.related(v, base, { follows: state.follows(), limit: 18 });
@@ -29,8 +38,8 @@ export async function watch(root, { id }) {
   let stream, desc = v.desc || '', chapters = [];
   try { stream = await sources.stream(v); } catch (e) {
     if (!alive) return () => {};
-    clear(player$).append(h('div.player', h('div.perr', h('div', h('h2', 'Couldn’t load this video'), h('p.sub', e.message)), h('div.row', { style: { justifyContent: 'center' } }, h('button.btn.pri', { onclick: () => { location.reload(); } }, 'Retry'), h('button.btn', { onclick: () => window.wt.openExternal(v.url) }, icon('ext', 16), 'Open original')))));
-    renderInfo(null); return () => { alive = false; };
+    clear(player$).append(h('div.player', h('div.perr', h('div', h('h2', 'Couldn’t load this video'), h('p.sub', e.message)), h('div.row', { style: { justifyContent: 'center', flexWrap: 'wrap' } }, h('button.btn.pri', { onclick: () => { location.reload(); } }, 'Try Again'), h('button.btn', { onclick: () => window.wt.openExternal(v.url) }, icon('ext', 16), 'Open Original'), h('button.btn', { onclick: openBrowser }, icon('compass', 16), 'Pretend as Browser')))));
+    renderInfo(null); return () => { alive = false; bp?.destroy(); };
   }
   if (!alive) return () => {};
   if (stream.dur && !v.dur) v.dur = stream.dur;
@@ -38,7 +47,7 @@ export async function watch(root, { id }) {
   chapters = stream.chapters?.length ? stream.chapters : parseChapters(desc);
   const resume = state.lib.resume[v.id], startAt = resume && v.dur && resume < v.dur * 0.95 ? resume : 0;
 
-  player = new Player({ video: v, stream, chapters, startAt, prefs, onTheater: () => { page.classList.toggle('theater'); },
+  player = new Player({ video: v, stream, chapters, startAt, prefs, onBrowser: openBrowser, onPrev: () => history.back(), onNext: () => related[0] && go(watchPath(related[0].v)), onTheater: () => { page.classList.toggle('theater'); },
     onEnded: () => { if (state.settings.autoplay && related[0]) { toast(`Up next: ${related[0].v.title.slice(0, 50)}`); setTimeout(() => alive && go(watchPath(related[0].v)), 900); } } });
   player.addMediaSession(v, () => history.back(), () => related[0] && go(watchPath(related[0].v)));
   player.media.addEventListener('loadedmetadata', () => { if (!v.dur && isFinite(player.media.duration)) v.dur = player.media.duration; });
@@ -71,7 +80,7 @@ export async function watch(root, { id }) {
   }
 
   return () => {
-    alive = false; clearInterval(saver); unmedia?.();
+    alive = false; clearInterval(saver); unmedia?.(); bp?.destroy();
     if (!player) return;
     const r = player.report(); player.destroy();
     if (r.seconds >= 1) {

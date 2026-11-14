@@ -12,6 +12,12 @@ contextBridge.exposeInMainWorld('wt', {
   reveal: f => inv('dl:reveal', f),
   openExternal: u => inv('open:external', u),
   fullscreen: on => inv('win:fullscreen', on),
+  glass: () => inv('win:glass'),
+  browser: {
+    open: (url, bounds) => inv('browser:open', url, bounds), bounds: b => inv('browser:bounds', b), nav: a => inv('browser:nav', a),
+    fullscreen: on => inv('browser:fullscreen', on), close: () => inv('browser:close'), clear: () => inv('browser:clear'),
+  },
+  relaunch: () => inv('app:relaunch'),
   alwaysOnTop: on => inv('win:alwaysOnTop', on),
   exportFile: (n, t) => inv('file:export', n, t),
   importFile: () => inv('file:import'),

@@ -47,11 +47,32 @@ function rail() {
 }
 
 function shell() {
-  const input = h('input', { id: 'q', placeholder: 'Search or paste a link', autocomplete: 'off', onkeydown: e => { if (e.key === 'Enter' && input.value.trim()) { go('/search/' + encodeURIComponent(input.value.trim())); input.blur(); } else if (e.key === 'Escape') input.blur(); } });
+  const sugg = h('div.sugg', { hidden: true, role: 'listbox' }); let items = [], sel = -1;
+  const closeSugg = () => { sugg.hidden = true; sel = -1; };
+  const drawSugg = () => {                                           // recent searches, filtered by what is typed; all stored locally
+    const q = input.value.trim().toLowerCase();
+    items = (state.lib.searches || []).filter(s => !q || (s.toLowerCase().includes(q) && s.toLowerCase() !== q)).slice(0, 8); sel = -1; clear(sugg);
+    if (!items.length) { sugg.hidden = true; return; }
+    sugg.hidden = false;
+    sugg.append(h('div.sh', h('span', 'Recent searches'), h('button.link', { type: 'button', onmousedown: e => e.preventDefault(), onclick: () => { state.clearSearches(); drawSugg(); } }, 'Clear all')),
+      ...items.map(s => h('div.sitem', { role: 'option', onmousedown: e => e.preventDefault(), onclick: () => { input.value = s; submit(); } }, icon('clock', 15), h('span.grow', s),
+        h('button.iconbtn', { type: 'button', title: 'Remove from history', 'aria-label': 'Remove ' + s, onmousedown: e => e.preventDefault(), onclick: e => { e.stopPropagation(); state.removeSearch(s); drawSugg(); } }, icon('x', 14)))));
+  };
+  const mark = () => [...sugg.querySelectorAll('.sitem')].forEach((el, i) => el.classList.toggle('on', i === sel));
+  const submit = () => { const v = input.value.trim(); closeSugg(); if (v) { state.addSearch(v); go('/search/' + encodeURIComponent(v)); input.blur(); } else input.focus(); };
+  const input = h('input', { id: 'q', placeholder: 'Search or paste a link', autocomplete: 'off', 'aria-label': 'Search', onfocus: drawSugg, oninput: drawSugg, onblur: closeSugg, onclick: () => { if (sugg.hidden) drawSugg(); },
+    onkeydown: e => {
+      if (e.key === 'Enter') { if (sel >= 0 && items[sel]) input.value = items[sel]; submit(); }
+      else if (e.key === 'Escape') { if (!sugg.hidden) { closeSugg(); e.stopPropagation(); } else input.blur(); }
+      else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        if (sugg.hidden) drawSugg();
+        if (items.length) { e.preventDefault(); sel = e.key === 'ArrowDown' ? (sel + 1 >= items.length ? -1 : sel + 1) : (sel - 1 < -1 ? items.length - 1 : sel - 1); mark(); }
+      }
+    } });
   const themeMenu = e => { const r = e.currentTarget.getBoundingClientRect(); contextMenu(r.right - 190, r.bottom + 6, THEMES.map(t => ({ icon: state.settings.theme === t.id ? 'check' : 'palette', label: t.name, run: () => { state.settings.theme = t.id; state.saveSettings(); } }))); };
   clear($('#top')).append(
     h('a.brand', { href: '#/' }, h('div.logo'), h('span', 'WishTube')),
-    h('div.search', icon('search', 17), input, h('kbd', 'Ctrl K')),
+    h('div.search', h('button.sgo', { type: 'button', title: 'Search', 'aria-label': 'Search', onclick: submit }, icon('search', 17)), input, h('kbd', 'Ctrl K'), sugg),
     h('button.iconbtn', { title: 'Theme', onclick: themeMenu }, icon('palette', 20)));
   rail();
 }
@@ -59,6 +80,7 @@ function shell() {
 addEventListener('keydown', e => {
   const typing = /INPUT|TEXTAREA|SELECT/.test(e.target.tagName);
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); palette(); }
+  else if ((e.ctrlKey || e.metaKey) && e.key === ',') { e.preventDefault(); go('/settings'); }
   else if (e.key === '/' && !typing) { e.preventDefault(); $('#q').focus(); }
   else if (e.key === 'Escape') closeOverlay();
   else if (e.altKey && e.key === 'ArrowLeft') history.back(); else if (e.altKey && e.key === 'ArrowRight') history.forward();

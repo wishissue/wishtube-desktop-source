@@ -5,9 +5,9 @@ import { SOURCE_IDS, creatorKey } from './models.js';
 const DEFAULTS = {
   theme: 'terminal', accent: null, density: 'comfortable', sidebar: true, sources: Object.fromEntries(SOURCE_IDS.map(s => [s, true])), order: SOURCE_IDS,
   ptInstance: 'https://framatube.org', mature: false, languages: ['en'], explore: 0.35, freshness: 0.5, diversity: 0.6,
-  autoplay: true, motion: true, closeToTray: false, downloadDir: null, onboarded: false, interests: [],
+  autoplay: true, motion: true, nativeGlass: true, glassBlur: 28, glassTint: 0.08, closeToTray: false, downloadDir: null, onboarded: false, interests: [],
 };
-const EMPTY_LIB = { liked: {}, saved: {}, later: {}, history: [], follows: {}, hiddenCreators: [], hiddenVideos: [], resume: {} };
+const EMPTY_LIB = { liked: {}, saved: {}, later: {}, history: [], follows: {}, hiddenCreators: [], hiddenVideos: [], resume: {}, searches: [] };
 const slim = v => { const { _lang, ...r } = v; return { ...r, desc: (r.desc || '').slice(0, 1200) }; };
 
 class Bus { constructor() { this.l = {}; } on(e, f) { (this.l[e] ||= new Set()).add(f); return () => this.l[e].delete(f); } emit(e, d) { this.l[e]?.forEach(f => f(d)); } }
@@ -20,6 +20,7 @@ export const state = {
     this.settings = { ...DEFAULTS, ...(s || {}), sources: { ...DEFAULTS.sources, ...(s?.sources || {}) } };
     this.lib = { ...structuredClone(EMPTY_LIB), ...(l || {}) };
     this.ranker = new Ranker(p || undefined, this.settings);
+    this.nativeGlass = await window.wt.glass?.().catch(() => null);
     this.ready = true;
     this.applyTheme();
     for (const v of [...Object.values(this.lib.liked), ...Object.values(this.lib.saved), ...Object.values(this.lib.later), ...this.lib.history.map(h => h.video)]) if (v) this.known.set(v.id, v);
@@ -35,6 +36,8 @@ export const state = {
       r.dataset.theme = t;
       if (this.settings.accent && this.settings.accent !== '#7c8cff') r.style.setProperty('--accent', this.settings.accent); else r.style.removeProperty('--accent');
       r.classList.toggle('no-motion', !this.settings.motion);
+      r.classList.toggle('native-glass', !!this.nativeGlass && t === 'glass');
+      r.style.setProperty('--glass-blur', this.settings.glassBlur + 'px'); r.style.setProperty('--glass-tint', this.settings.glassTint);
     };
     // smooth cross-fade between themes (Chromium View Transitions), skipped on first paint and with motion off
     if (this._themed && this._themed !== t && this.settings.motion && document.startViewTransition) document.startViewTransition(apply); else apply();
@@ -65,6 +68,9 @@ export const state = {
     if (i >= 0) h.splice(i, 1); h.unshift(e); if (h.length > 600) h.length = 600;
     this.saveLib();
   },
+  addSearch(q) { q = q.trim().slice(0, 200); if (!q || /^https?:\/\//i.test(q)) return; this.lib.searches = [q, ...this.lib.searches.filter(x => x.toLowerCase() !== q.toLowerCase())].slice(0, 30); this.saveLib(); },
+  removeSearch(q) { this.lib.searches = this.lib.searches.filter(x => x !== q); this.saveLib(); },
+  clearSearches() { this.lib.searches = []; this.saveLib(); },
   setResume(id, sec) { this.lib.resume[id] = sec; window.wt.set('library', this.lib); },
 
   exportProfile() { return JSON.stringify({ app: 'wishtube', v: 2, settings: this.settings, library: this.lib, profile: this.ranker.toJSON() }); },

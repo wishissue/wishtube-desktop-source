@@ -4,9 +4,10 @@ const path = require('node:path');
 const fs = require('node:fs');
 const { Store } = require('./store.cjs');
 const { Downloads } = require('./downloads.cjs');
+const browserPlayer = require('./browser.cjs');
 
 const UA = `WishTube/${app.getVersion()} (+https://github.com/wishissue/wishtube)`;
-let win = null, tray = null, quitting = false, store, downloads;
+let win = null, tray = null, quitting = false, store, downloads, bp;
 
 if (!app.requestSingleInstanceLock()) app.quit();
 app.on('second-instance', (_e, argv) => {
@@ -36,10 +37,25 @@ async function netJson(url, opts = {}) {
   throw last;
 }
 
+/** Real see-through glass needs the OS: Windows 11 acrylic, macOS vibrancy, or a transparent window on Linux compositors.
+ *  It can only be chosen when the window is created, so the choice is read from saved settings at launch. */
+function glassMode() {
+  const s = store?.get('settings', {}) || {};
+  if (s.theme !== 'glass' || s.nativeGlass === false) return null;
+  if (process.platform === 'win32') return Number(require('node:os').release().split('.')[2]) >= 22000 ? 'acrylic' : null;
+  if (process.platform === 'darwin') return 'vibrancy';
+  return 'transparent';
+}
+let glass = null;
+
 function createWindow() {
+  glass = glassMode();
+  const glassOpts = glass === 'acrylic' ? { backgroundMaterial: 'acrylic', backgroundColor: '#00000000' }
+    : glass === 'vibrancy' ? { vibrancy: 'under-window', backgroundColor: '#00000000' }
+    : glass === 'transparent' ? { transparent: true, backgroundColor: '#00000000' } : { backgroundColor: '#0e0f12' };
   win = new BrowserWindow({
     width: 1360, height: 860, minWidth: 900, minHeight: 600,
-    backgroundColor: '#0e0f12', title: 'WishTube', autoHideMenuBar: true, show: false,
+    ...glassOpts, title: 'WishTube', autoHideMenuBar: true, show: false,
     icon: path.join(__dirname, '../renderer/icon.png'),
     webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true, backgroundThrottling: false },
   });
@@ -51,7 +67,8 @@ function createWindow() {
   win.on('close', e => { if (!quitting && store?.get('settings', {}).closeToTray) { e.preventDefault(); win.hide(); } });
   win.on('enter-full-screen', () => win.webContents.send('fullscreen', true));
   win.on('leave-full-screen', () => win.webContents.send('fullscreen', false));
-  win.on('closed', () => { win = null; });
+  win.on('resize', () => bp?.onWindowResize());
+  win.on('closed', () => { bp?.close(); win = null; });
 }
 
 app.whenReady().then(() => {
@@ -65,8 +82,12 @@ app.whenReady().then(() => {
     h['Access-Control-Allow-Origin'] = ['*']; h['Access-Control-Allow-Headers'] = ['*']; h['Access-Control-Allow-Methods'] = ['GET, HEAD, OPTIONS'];
     cb({ responseHeaders: h });
   });
-  session.defaultSession.setPermissionRequestHandler((_wc, _p, cb) => cb(false));
+  // Deny everything except what the player genuinely needs. Electron gates HTML fullscreen behind a permission, so denying all broke the fullscreen button.
+  const ALLOWED = new Set(['fullscreen']);
+  session.defaultSession.setPermissionRequestHandler((_wc, perm, cb) => cb(ALLOWED.has(perm)));
+  session.defaultSession.setPermissionCheckHandler((_wc, perm) => ALLOWED.has(perm));
 
+  bp = browserPlayer.register(ipcMain, app, () => win);
   const h = ipcMain.handle.bind(ipcMain);
   h('net:json', (_e, url, opts) => netJson(url, opts));
   h('store:get', (_e, key, def) => store.get(key, def));
@@ -78,6 +99,8 @@ app.whenReady().then(() => {
   h('dl:reveal', (_e, file) => { shell.showItemInFolder(file); });
   h('open:external', (_e, url) => { if (/^https?:/.test(url)) shell.openExternal(url); });
   h('win:fullscreen', (_e, on) => { win.setFullScreen(!!on); });
+  h('win:glass', () => glass);
+  h('app:relaunch', () => { app.relaunch(); quitting = true; app.quit(); });
   h('win:alwaysOnTop', (_e, on) => { win.setAlwaysOnTop(!!on, 'floating'); return win.isAlwaysOnTop(); });
   h('file:export', async (_e, name, text) => {
     const r = await dialog.showSaveDialog(win, { defaultPath: name, filters: [{ name: 'JSON', extensions: ['json'] }] });

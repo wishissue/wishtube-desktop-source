@@ -49,3 +49,16 @@ test('licenses for everything vendored are shipped', () => {
   const have = readdirSync(new URL('../renderer/assets/licenses/', import.meta.url));
   for (const n of ['Inter', 'JetBrainsMono', 'NotoSans', 'Lucide', 'OpenProps', '7.css', 'XP.css', 'system.css']) assert.ok(have.some(f => f.startsWith(n)), n);
 });
+
+test('glass: has orbs, tunable blur/tint vars, and a native see-through mode', () => {
+  const css = read('themes.css'), html = read('index.html');
+  assert.match(css, /--glass-blur/); assert.match(css, /--glass-tint/);
+  assert.match(css, /\.native-glass\[data-theme="glass"\]/);
+  assert.equal((html.match(/class="orb o\d"/g) || []).length, 3);
+});
+
+test('main process allows the fullscreen permission and the search icon is a real button', () => {
+  const main = readFileSync(new URL('../main/main.cjs', import.meta.url), 'utf8');
+  assert.match(main, /ALLOWED = new Set\(\['fullscreen'\]\)/);
+  assert.match(read('app.js'), /button\.sgo/);
+});

@@ -9,7 +9,8 @@ const mod = (x, a, b) => Math.min(b, Math.max(a, x));
  * quality / speed / caption menus, full keyboard map, PiP, MediaSession, and watch-time accounting.
  */
 export class Player {
-  constructor({ video, stream, chapters = [], onTheater, onEnded, startAt = 0, prefs }) {
+  constructor({ video, stream, chapters = [], onTheater, onEnded, onNext, onPrev, onBrowser, startAt = 0, prefs }) {
+    this.onNext = onNext; this.onPrev = onPrev; this.onBrowser = onBrowser;
     this.v = video; this.stream = stream; this.chapters = chapters; this.onEnded = onEnded; this.onTheater = onTheater;
     this.watched = 0; this.maxPos = 0; this.last = null; this.urlIdx = 0; this.hls = null; this.startAt = startAt; this.menu = null; this.prefs = prefs;
     this.el = h('div.player', { tabIndex: 0 });
@@ -47,8 +48,10 @@ export class Player {
   }
   fail() {
     this.spin.style.display = 'none';
-    this.err = h('div.perr', h('div', h('h2', 'This video couldn’t be played'), h('p.sub', 'Every available stream failed. The source may be down, private, or geo-restricted.')),
-      h('div.row', { style: { justifyContent: 'center' } }, h('button.btn.pri', { onclick: () => { this.err.remove(); this.spin.style.display = ''; this.load(0); } }, 'Try again'), h('button.btn', { onclick: () => window.wt.openExternal(this.v.url) }, icon('ext', 16), 'Open original')));
+    this.err = h('div.perr', h('div', h('h2', 'This video couldn’t be played'), h('p.sub', 'Every available stream failed. The source may be down, private, or geo-restricted. If it plays on the website, try Pretend as Browser.')),
+      h('div.row', { style: { justifyContent: 'center', flexWrap: 'wrap' } }, h('button.btn.pri', { onclick: () => { this.err.remove(); this.spin.style.display = ''; this.load(0); } }, 'Try Again'),
+        h('button.btn', { onclick: () => window.wt.openExternal(this.v.url) }, icon('ext', 16), 'Open Original'),
+        this.onBrowser ? h('button.btn', { onclick: () => this.onBrowser() }, icon('compass', 16), 'Pretend as Browser') : null));
     this.el.append(this.err);
   }
   destroyHls() { this.hls?.destroy(); this.hls = null; }
@@ -130,14 +133,15 @@ export class Player {
     let idle; const wake = () => { this.el.classList.remove('idle'); clearTimeout(idle); idle = setTimeout(() => { if (!m.paused && !this.menu) this.el.classList.add('idle'); }, 2600); };
     this.el.addEventListener('mousemove', wake); wake();
     this.keyH = e => {
-      if (/INPUT|TEXTAREA|SELECT/.test(e.target.tagName) && e.target.type !== 'range') return;
+      if ((/INPUT|TEXTAREA|SELECT/.test(e.target.tagName) && e.target.type !== 'range') || e.target.isContentEditable) return;
+      if (e.key === ' ' && /^(BUTTON|A)$/.test(e.target.tagName)) return;   // Space activates a focused button, not the player
       if (e.ctrlKey || e.metaKey || e.altKey) return;
       const k = e.key, dur = m.duration || 0;
       const map = {
         ' ': () => this.toggle(), k: () => this.toggle(), j: () => this.skip(-10), l: () => this.skip(10), ArrowLeft: () => this.skip(-5), ArrowRight: () => this.skip(5),
         ArrowUp: () => { m.volume = mod(m.volume + 0.05, 0, 1); this.vol.value = m.volume; this.flash(Math.round(m.volume * 100) + '%'); },
         ArrowDown: () => { m.volume = mod(m.volume - 0.05, 0, 1); this.vol.value = m.volume; this.flash(Math.round(m.volume * 100) + '%'); },
-        m: () => this.mute(), f: () => this.fullscreen(), t: () => this.onTheater?.(), i: () => this.pip(), c: () => this.captionsMenu(),
+        n: () => this.onNext?.(), p: () => this.onPrev?.(), m: () => this.mute(), f: () => this.fullscreen(), t: () => this.onTheater?.(), i: () => this.pip(), c: () => this.captionsMenu(),
         '>': () => { m.playbackRate = SPEEDS[Math.min(SPEEDS.length - 1, SPEEDS.indexOf(m.playbackRate) + 1)] || 1; this.flash(m.playbackRate + '×'); },
         '<': () => { m.playbackRate = SPEEDS[Math.max(0, SPEEDS.indexOf(m.playbackRate) - 1)] || 1; this.flash(m.playbackRate + '×'); },
         ',': () => { m.pause(); m.currentTime -= 1 / 30; }, '.': () => { m.pause(); m.currentTime += 1 / 30; },

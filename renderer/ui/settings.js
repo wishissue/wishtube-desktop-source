@@ -31,7 +31,8 @@ export function settings(root) {
   root.append(h('div.page', { style: { maxWidth: '820px' } }, h('h1', { style: { marginBottom: '18px' } }, 'Settings'),
 
     h('div.panel', h('h2', 'Look'), themePick,
-      field('Animations', null, toggle(() => S.motion, v => { S.motion = v; }))),
+      field('Animations', null, toggle(() => S.motion, v => { S.motion = v; })),
+      glassControls()),
 
     h('div.panel', h('h2', 'Feed'),
       field('Explore new things', null, slider('explore')), field('Prefer fresh videos', null, slider('freshness')), field('Mix it up', null, slider('diversity')),
@@ -55,6 +56,17 @@ export function settings(root) {
         h('button.btn', { onclick: async () => { pool.t = 0; pool.videos = []; window.wt.set('pool', null); toast('Cache cleared'); } }, 'Clear feed cache')),
       h('p.sub', { style: { marginTop: '12px' } }, 'Everything stays on this computer. No account, no analytics.'))));
 
+  function glassControls() {
+    const box = h('div');
+    const live = (k, min, max, step) => h('input', { type: 'range', min, max, step, value: S[k], oninput: e => { S[k] = +e.target.value; document.documentElement.style.setProperty(k === 'glassBlur' ? '--glass-blur' : '--glass-tint', k === 'glassBlur' ? S[k] + 'px' : S[k]); }, onchange: save });
+    const draw = () => {
+      clear(box); if (normalizeTheme(S.theme) !== 'glass') return;
+      box.append(field('Glass blur', null, live('glassBlur', 4, 60, 1)), field('Glass tint', 'Lower is clearer', live('glassTint', 0, 0.4, 0.01)),
+        field('See-through window', state.nativeGlass ? 'On: the desktop shows through the window' : 'Uses real OS glass (Windows 11 acrylic, macOS vibrancy, Linux compositor). Needs a restart to apply.', h('div.row', toggle(() => S.nativeGlass, v => { S.nativeGlass = v; }),
+          h('button.btn.sm', { onclick: async () => { await window.wt.set('settings', S); window.wt.relaunch(); } }, 'Restart'))));
+    };
+    state.bus.on('settings', draw); draw(); return box;
+  }
   function move(i, d) { const a = S.order, j = i + d; [a[i], a[j]] = [a[j], a[i]]; save(); clear(root); settings(root); }
   drawTaste();
   return () => {};
