@@ -24,28 +24,28 @@ export function home(root) {
     const ranked = state.ranker.rank(all, { mode, follows: state.follows(), hidden: state.hidden(), seed, limit: 160 });
     if (!ranked.length) {
       if (pool.refreshing || !pool.t) { body.append(skeletons(12)); return; }
-      body.append(h('div.empty', h('h2', mode === 'following' ? 'Nothing from your follows yet' : 'Nothing to show'), h('p', mode === 'following' ? 'Follow a creator from any video and their uploads show up here.' : 'Check your connection or enable more sources in Settings.'), h('button.btn.pri', { style: { marginTop: '16px' }, onclick: refresh }, 'Retry')));
+      body.append(h('div.empty', h('h2', mode === 'following' ? 'Nothing from your follows yet' : 'Nothing to show'), h('p', mode === 'following' ? 'Follow a creator and their videos land here.' : 'Check your connection.'), h('button.btn.pri', { style: { marginTop: '16px' }, onclick: refresh }, 'Retry')));
       return;
     }
     const mk = (v, i) => card(v, i, { onHide: draw, observe, why: ranked.find(r => r.v.id === v.id)?.reasons });
     if (mode === 'foryou') {
       // Continue watching
       const cont = state.lib.history.filter(e => e.dur && e.progress / e.dur > 0.03 && e.progress / e.dur < 0.93).slice(0, 12).map(e => e.video).filter(v => !state.hidden().videos.has(v.id));
-      if (cont.length) { cont.forEach(v => used.add(v.id)); body.append(shelf('Continue watching', null, cont.map((v, i) => mk(v, i)))); }
+      if (cont.length) { cont.forEach(v => used.add(v.id)); body.append(shelf('Continue', null, cont.map((v, i) => mk(v, i)))); }
       // New from follows
       const fol = state.follows();
       if (fol.size) {
         const fv = all.filter(v => fol.has(creatorKey(v)) && !used.has(v.id)).sort((a, b) => b.date - a.date).slice(0, 12);
-        if (fv.length >= 3) { fv.forEach(v => used.add(v.id)); body.append(shelf('New from your follows', null, fv.map((v, i) => mk(v, i)))); }
+        if (fv.length >= 3) { fv.forEach(v => used.add(v.id)); body.append(shelf('From people you follow', null, fv.map((v, i) => mk(v, i)))); }
       }
       // One shelf per interest
-      for (const sh of state.ranker.byInterest(all.filter(v => !used.has(v.id)), { hidden: state.hidden() })) {
+      for (const sh of state.ranker.byInterest(all.filter(v => !used.has(v.id)), { hidden: state.hidden() }).slice(0, 2)) {
         sh.items.forEach(v => used.add(v.id));
-        body.append(shelf('Because you like ' + sh.terms.join(' · '), null, sh.items.map((v, i) => mk(v, i))));
+        body.append(shelf('Because you like ' + sh.terms.slice(0, 2).join(' & '), null, sh.items.map((v, i) => mk(v, i))));
       }
     }
     const rest = ranked.filter(r => !used.has(r.v.id));
-    body.append(h('div.bighead', h('h2', mode === 'foryou' ? 'Recommended' : MODES[mode].label), h('span.sub', `${rest.length} videos · ranked on this computer`)));
+    if (used.size) body.append(h('div.bighead', h('h2', mode === 'foryou' ? 'More for you' : MODES[mode].label)));
     const g = h('div.grid'); body.append(g);
     stop = infinite(g, rest, (r, i) => mk(r.v, i));
   }
@@ -58,7 +58,7 @@ export function home(root) {
     catch (e) { toast('Refresh failed: ' + e.message); }
     if (!alive) return;
     if (forceDraw || document.getElementById('view').scrollTop < 80) draw();
-    else clear(bannerHost).append(h('div.banner.pillfloat', icon('sparkle', 16), 'New videos found', h('button.btn.sm', { onclick: () => { clear(bannerHost); draw(); document.getElementById('view').scrollTo({ top: 0 }); } }, 'Show')));
+    else clear(bannerHost).append(h('div.banner.pillfloat', icon('sparkle', 16), 'New videos', h('button.btn.sm', { onclick: () => { clear(bannerHost); draw(); document.getElementById('view').scrollTo({ top: 0 }); } }, 'Show')));
   }
 
   root.append(h('div.page', h('div.sticky', h('div.row', chips, h('div.grow'), h('button.iconbtn', { title: 'Refresh feed', onclick: refresh }, icon('refresh', 18)))), bannerHost, body));

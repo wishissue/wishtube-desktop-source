@@ -1,0 +1,116 @@
+/* WishTube themes. Each block only sets variables (see styles.css for what they drive), plus a few small overrides at the bottom.
+   Design references (all MIT, see assets/licenses/): Aero = 7.css gradients; XP = XP.css Luna values; Mac = system.css (System 6 look). */
+
+/* ===== Terminal: flat, black, monospace ===== */
+[data-theme="terminal"] { --bg:#000; --surface:#08080a; --surface-2:#101014; --surface-3:#1a1a20; --line:#25252d; --text:#e9e4f5; --muted:#8c869a; --faint:#5b5668; --accent:#a66cff; --on-accent:#000;
+  --font:var(--mono); --fs:13.5px; --r:0px; --r-sm:0px; --r-pill:0px; --hov-lift:-2px; --chrome:#000; --pop:#08080a;
+  --ctl:transparent; --ctl-bd:var(--line); --ctl-h:transparent; --ctl-bd-h:var(--accent); --ctl-text-h:var(--accent); --ghost-text-h:var(--accent);
+  --pri:var(--accent); --pri-text:#000; --on-bg:var(--accent); --on-text:#000; --on-bd:var(--accent); --desc-fade:#000; --sw-knob-on:var(--accent); --sw-on-bg:transparent; }
+[data-theme="terminal"] .thumb, [data-theme="terminal"] .avatar { border: 1px solid var(--line); }
+
+/* ===== Glass: dark liquid glass over soft colour ===== */
+[data-theme="glass"] { --bg:#070912; --surface:rgba(255,255,255,.07); --surface-2:rgba(255,255,255,.11); --surface-3:rgba(255,255,255,.18); --line:rgba(255,255,255,.16); --text:#f5f7fb; --muted:#b6bccb; --faint:#7f8596; --accent:#9ec5ff; --on-accent:#0a0f1f;
+  --bg-image: radial-gradient(60vw 55vh at 10% 6%, rgba(59,91,219,.55), transparent 65%), radial-gradient(50vw 50vh at 92% 24%, rgba(192,38,211,.42), transparent 65%), radial-gradient(60vw 50vh at 42% 104%, rgba(14,165,165,.42), transparent 65%);
+  --r:16px; --r-sm:12px; --r-pill:999px; --blur:blur(22px) saturate(1.7); --shell-pad:0 10px 10px; --shell-gap:10px; --top-m:10px 10px 8px; --top-r:18px; --top-bb:1px solid var(--line); --fw:450;
+  --chrome:rgba(255,255,255,.07); --chrome-bd:1px solid var(--line); --chrome-sh:inset 0 1px 0 rgba(255,255,255,.22), 0 10px 30px rgba(0,0,0,.28);
+  --rail-bg:rgba(255,255,255,.06); --rail-bd:1px solid var(--line); --rail-br:1px solid var(--line); --rail-r:18px; --rail-sh:inset 0 1px 0 rgba(255,255,255,.18);
+  --view-bg:rgba(255,255,255,.04); --view-bd:1px solid var(--line); --view-r:18px; --view-sh:inset 0 1px 0 rgba(255,255,255,.14); --sticky-bg:rgba(16,18,32,.55); --desc-fade:rgba(20,22,38,.9);
+  --nav-on:rgba(255,255,255,.14); --nav-on-sh:inset 0 1px 0 rgba(255,255,255,.3); --nav-bar:none;
+  --ctl:rgba(255,255,255,.1); --ctl-h:rgba(255,255,255,.2); --ctl-bd:rgba(255,255,255,.18); --ctl-sh:inset 0 1px 0 rgba(255,255,255,.25);
+  --pri:linear-gradient(rgba(255,255,255,.96),rgba(206,222,255,.86)); --pri-text:#0a0f1f; --pri-sh:inset 0 1px 0 #fff, 0 6px 18px rgba(120,160,255,.35);
+  --on-bg:rgba(255,255,255,.9); --on-text:#0a0f1f; --in-bg:rgba(255,255,255,.08); --in-sh:inset 0 1px 0 rgba(255,255,255,.14);
+  --pop:rgba(28,30,48,.72); --pop-bd:1px solid rgba(255,255,255,.2); --pop-sh:0 18px 50px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.22); --sel-bg:rgba(255,255,255,.16); --sel-text:#fff;
+  --thumb-bd:1px solid rgba(255,255,255,.14); --thumb-sh:0 6px 20px rgba(0,0,0,.35); --thumb-sh-h:0 14px 34px rgba(0,0,0,.5); --panel-sh:inset 0 1px 0 rgba(255,255,255,.14); --panel-blur:blur(16px);
+  --play-bg:rgba(255,255,255,.22); --play-fg:#fff; --play-bd:1px solid rgba(255,255,255,.5); --play-sh:inset 0 1px 0 rgba(255,255,255,.5), 0 8px 24px rgba(0,0,0,.4);
+  --logo-bg:linear-gradient(135deg,#9ec5ff,#c78bff); --sw-on-bg:rgba(158,197,255,.3); --toast-bg:rgba(255,255,255,.9); --toast-text:#0a0f1f; }
+[data-theme="glass"] .thumb { backdrop-filter: blur(6px); }
+
+/* ===== Frutiger Aero: glossy sky, bubbles, grass, Win7-style gradients ===== */
+[data-theme="aero"] { --bg:#8fd0ff; --font:"Noto Sans", "Segoe UI", system-ui, sans-serif; --fs:13.5px; --fw:450; --title-fw:600; --sw:1.9;
+  --bg-image:
+    radial-gradient(circle 120px at 11% 24%, rgba(255,255,255,.6), rgba(255,255,255,.1) 62%, rgba(255,255,255,0) 64%),
+    radial-gradient(circle 64px at 27% 63%, rgba(255,255,255,.55), rgba(255,255,255,.08) 62%, rgba(255,255,255,0) 64%),
+    radial-gradient(circle 170px at 79% 16%, rgba(255,255,255,.5), rgba(255,255,255,.08) 62%, rgba(255,255,255,0) 64%),
+    radial-gradient(circle 88px at 91% 66%, rgba(255,255,255,.55), rgba(255,255,255,.08) 62%, rgba(255,255,255,0) 64%),
+    radial-gradient(circle 44px at 58% 38%, rgba(255,255,255,.6), rgba(255,255,255,.08) 62%, rgba(255,255,255,0) 64%),
+    radial-gradient(140% 36% at 22% 110%, #6cc24a 0 62%, transparent 63%), radial-gradient(120% 32% at 90% 114%, #3fa34d 0 62%, transparent 63%),
+    linear-gradient(180deg,#3fa2f3 0%,#86d0ff 38%,#d4f0ff 66%,#bfe9a8 100%);
+  --text:#0f2a40; --muted:#3b617f; --faint:#7898b2; --accent:#1c8ee6; --on-accent:#fff; --link:#0b63b8;
+  --surface:rgba(255,255,255,.5); --surface-2:rgba(255,255,255,.55); --surface-3:rgba(255,255,255,.82); --line:rgba(20,80,140,.25);
+  --r:10px; --r-sm:4px; --r-pill:999px; --blur:blur(12px) saturate(1.4); --shell-pad:0 8px 8px; --shell-gap:8px; --top-m:8px 8px 8px; --top-r:10px; --top-bb:1px solid rgba(255,255,255,.85);
+  --chrome:linear-gradient(180deg,rgba(255,255,255,.85),rgba(255,255,255,.42) 48%,rgba(165,212,246,.5) 52%,rgba(205,232,250,.6)); --chrome-bd:1px solid rgba(20,80,140,.38); --chrome-sh:inset 0 1px 0 #fff, 0 6px 20px rgba(10,60,110,.28); --chrome-ts:0 0 8px #fff, 0 0 2px #fff;
+  --rail-bg:rgba(255,255,255,.42); --rail-bd:1px solid rgba(20,80,140,.32); --rail-br:1px solid rgba(20,80,140,.32); --rail-r:10px; --rail-sh:inset 0 0 0 1px rgba(255,255,255,.65), 0 6px 20px rgba(10,60,110,.22); --rail-text:#1d4467; --rail-ts:0 0 6px #fff;
+  --nav-on:linear-gradient(#eaf6fd 45%,#bee6fd 45%,#a7d9f5); --nav-on-text:#06304f; --nav-on-sh:inset 0 0 0 1px rgba(255,255,255,.85), 0 0 0 1px #3c7fb1; --nav-bar:none;
+  --view-bg:rgba(255,255,255,.58); --view-bd:1px solid rgba(20,80,140,.32); --view-r:10px; --view-sh:inset 0 0 0 1px rgba(255,255,255,.7), 0 8px 28px rgba(10,60,110,.28); --view-blur:blur(10px); --sticky-bg:rgba(240,249,255,.8); --desc-fade:rgba(235,247,255,.96);
+  --ghost-h:rgba(255,255,255,.6); --ghost-text-h:#0f2a40;
+  --ctl:linear-gradient(#f2f2f2 45%,#ebebeb 45%,#cfcfcf); --ctl-bd:#6f8296; --ctl-sh:inset 0 0 0 1px rgba(255,255,255,.85); --ctl-text:#0f2a40;
+  --ctl-h:linear-gradient(#eaf6fd 45%,#bee6fd 45%,#a7d9f5); --ctl-bd-h:#3c7fb1; --ctl-a:linear-gradient(#e5f4fc,#c4e5f6 30% 50%,#98d1ef 50%,#68b3db); --ctl-sh-a:inset 1px 1px 0 rgba(0,0,0,.18);
+  --pri:linear-gradient(#8fdcff 45%,#34a3ec 45%,#1b83d6); --pri-text:#fff; --pri-bd:#14609f; --pri-sh:inset 0 0 0 1px rgba(255,255,255,.55); --pri-ts:0 -1px rgba(0,60,120,.55);
+  --on-bg:linear-gradient(#d4f1ff 45%,#8fd3f7 45%,#56b6ec); --on-text:#05304f; --on-bd:#2a74b0; --on-sh:inset 0 0 0 1px rgba(255,255,255,.75);
+  --in-bg:rgba(255,255,255,.88); --in-bd:rgba(20,80,140,.5); --in-sh:inset 0 1px 2px rgba(0,40,80,.22); --in-sh-focus:0 0 0 3px rgba(60,160,240,.4);
+  --pop:rgba(240,249,255,.92); --pop-bd:1px solid rgba(20,80,140,.42); --pop-sh:0 12px 34px rgba(10,60,110,.38), inset 0 0 0 1px rgba(255,255,255,.75); --sel-bg:linear-gradient(#eaf6fd 45%,#bee6fd 45%,#a7d9f5); --sel-text:#06304f;
+  --thumb-bd:1px solid rgba(255,255,255,.9); --thumb-sh:0 2px 10px rgba(10,60,110,.32); --thumb-sh-h:0 10px 24px rgba(10,60,110,.42); --panel-sh:inset 0 0 0 1px rgba(255,255,255,.7); --panel-blur:blur(6px);
+  --play-bg:radial-gradient(circle at 35% 25%,#dcf5ff,#3aa6ee 55%,#1569b5); --play-fg:#fff; --play-bd:2px solid rgba(255,255,255,.85); --play-sh:0 4px 14px rgba(0,60,120,.5);
+  --logo-bg:linear-gradient(#8fdcff 45%,#2a98e6 45%,#1b7fd0); --logo-r:6px; --logo-sh:inset 0 0 0 1px rgba(255,255,255,.6);
+  --sw-bg:rgba(255,255,255,.7); --sw-bd:#6f8296; --sw-knob:linear-gradient(#fff,#d6e3ee); --sw-knob-on:linear-gradient(#fff,#d6e3ee); --sw-knob-sh:0 1px 3px rgba(0,0,0,.4); --sw-on-bg:linear-gradient(#8fdcff,#34a3ec);
+  --toast-bg:rgba(18,58,98,.9); --toast-text:#fff; --sb-thumb:rgba(60,120,180,.45); --sb-r:8px; --sb-bd:3px solid transparent; }
+
+/* ===== Windows XP (Luna): blue title bar, beige chrome, orange hover, green Start accents ===== */
+[data-theme="xp"] { --bg:#3a6ea5; --font:"Noto Sans", Tahoma, "Segoe UI", sans-serif; --fs:13px; --fw:400; --title-fw:700; --top:40px; --sw:2; --side:80px;
+  --bg-image: radial-gradient(130% 30% at 20% 112%, #5aa832 0 64%, transparent 65%), radial-gradient(120% 26% at 92% 116%, #3d8a28 0 64%, transparent 65%), linear-gradient(180deg,#1f5fd8 0%,#5b9ef0 45%,#bfe0ff 68%);
+  --text:#000; --muted:#59594f; --faint:#8a8a7e; --accent:#316ac5; --on-accent:#fff; --link:#0046d5;
+  --surface:#fff; --surface-2:#ece9d8; --surface-3:#d6d2c2; --line:#d0d0bf;
+  --r:3px; --r-sm:3px; --r-pill:3px; --top-r:8px 8px 0 0; --shell-pad:0 3px 3px; --body-bg:#0a4fe0;
+  --chrome:linear-gradient(180deg,#0997ff 0%,#0053ee 8%,#0050ee 40%,#0066ff 88%,#0066ff 93%,#005bff 95%,#003dd7 96%,#003dd7 100%); --chrome-text:#fff; --chrome-ts:1px 1px #0f1089; --chrome-bd:1px solid #0831d9; --top-bb:1px solid #001ea0;
+  --rail-bg:linear-gradient(180deg,#7ba2e7 0%,#6375d6 100%); --rail-br:0; --rail-text:#fff; --rail-ts:1px 1px rgba(0,0,60,.5); --ghost-h:rgba(255,255,255,.22); --ghost-text-h:#fff; --nav-on:#fff; --nav-on-text:#215dc6; --nav-bar:none; --rail-r:0;
+  --view-bg:#fff; --sticky-bg:#fff; --desc-fade:#fff;
+  --ctl:linear-gradient(180deg,#fff 0%,#ecebe5 86%,#d8d0c4 100%); --ctl-bd:#003c74; --ctl-text:#000; --ctl-h:linear-gradient(180deg,#fff 0%,#ecebe5 86%,#d8d0c4 100%); --ctl-sh-h:inset -1px 1px #fff0cf, inset 1px 2px #fdd889, inset -2px 2px #fbc761, inset 2px -2px #e5a01a;
+  --ctl-a:linear-gradient(180deg,#cdcac3 0%,#e3e3db 8%,#e5e5de 94%,#f2f2f1 100%); --ctl-sh-a:none;
+  --pri:linear-gradient(180deg,#78d668 0%,#3aa534 45%,#2a8a24 100%); --pri-text:#fff; --pri-bd:#1d6a1a; --pri-sh:inset 0 1px #c3f3b4; --pri-ts:1px 1px rgba(0,70,0,.6);
+  --on-bg:#316ac5; --on-text:#fff; --on-bd:#1b4a9a; --in-bg:#fff; --in-bd:#7f9db9;
+  --pop:#fff; --pop-bd:1px solid #aca899; --pop-sh:2px 2px 4px rgba(0,0,0,.4); --sel-bg:#316ac5; --sel-text:#fff;
+  --thumb-bd:1px solid #aca899; --thumb-sh-h:0 0 0 3px #316ac5; --hov-lift:0px;
+  --play-bg:radial-gradient(circle at 35% 25%,#9be88e,#2f9a2a 60%,#1c6a18); --play-fg:#fff; --play-r:50%; --play-bd:2px solid #fff; --play-sh:0 2px 6px rgba(0,0,0,.45);
+  --logo-bg:linear-gradient(#78d668,#2a8a24); --logo-r:4px; --logo-sh:inset 0 1px #c3f3b4, 0 0 0 1px #1d6a1a;
+  --sw-bg:#fff; --sw-bd:#1d5281; --sw-knob:#1d5281; --sw-knob-on:#2f9a2a; --sw-on-bg:#fff;
+  --toast-bg:#ffffe1; --toast-text:#000; --toast-bd:1px solid #000; --sb-thumb:#c8d6fb; --sb-bd:1px solid #8fa7e8; --sb-track:#f3f1e6; }
+[data-theme="xp"] .panel > h2 { color: #0046d5; } [data-theme="xp"] .chip.on { box-shadow: inset 0 0 0 1px rgba(255,255,255,.35); }
+[data-theme="xp"] .nav.on { box-shadow: 0 0 0 1px #fff, 1px 1px 3px rgba(0,0,60,.4); text-shadow: none; } [data-theme="xp"] .brand { font-family: "Trebuchet MS", "Noto Sans", sans-serif; font-style: italic; }
+
+/* ===== Mac OS (System 6): black on white, dithered desktop, hard-shadow windows ===== */
+[data-theme="mac"] { --bg:#fff; --font:Inter, system-ui, sans-serif; --fs:13.5px; --fw:500; --title-fw:700; --sw:2.1; --top:44px;
+  --bg-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='2' height='2'%3E%3Crect width='1' height='1' fill='%23000'/%3E%3Crect x='1' y='1' width='1' height='1' fill='%23000'/%3E%3C/svg%3E"); --bg-size:2px 2px; --bg-render:pixelated;
+  --text:#000; --muted:#4a4a4a; --faint:#888; --accent:#000; --on-accent:#fff; --link:#000; --prog:#fff;
+  --surface:#fff; --surface-2:#f0f0f0; --surface-3:#d8d8d8; --line:#000;
+  --r:0px; --r-sm:5px; --r-pill:5px; --shell-pad:12px; --shell-gap:12px; --chrome:#fff; --top-bb:2px solid #000;
+  --rail-bg:#fff; --rail-bd:2px solid #000; --rail-br:2px solid #000; --rail-sh:3px 3px 0 #000; --rail-text:#000; --nav-on:#000; --nav-on-text:#fff; --nav-bar:none; --ghost-h:#000; --ghost-text-h:#fff;
+  --view-bg:#fff; --view-bd:2px solid #000; --view-sh:3px 3px 0 #000; --sticky-bg:#fff; --desc-fade:#fff; --skel-bg:repeating-conic-gradient(#000 0 25%, #fff 0 50%) 0 0/4px 4px;
+  --ctl:#fff; --ctl-bd:#000; --ctl-h:#000; --ctl-text-h:#fff; --ctl-a:#000;
+  --pri:#fff; --pri-text:#000; --pri-bd:#000; --pri-sh:0 0 0 2px #fff, 0 0 0 4px #000; --pri-filter:invert(1);
+  --on-bg:#000; --on-text:#fff; --on-bd:#000; --in-bg:#fff; --in-bd:#000; --in-sh-focus:0 0 0 2px #000;
+  --pop:#fff; --pop-bd:2px solid #000; --pop-sh:3px 3px 0 #000; --sel-bg:#000; --sel-text:#fff;
+  --thumb-bd:1px solid #000; --thumb-sh-h:3px 3px 0 #000; --hov-lift:-2px;
+  --play-bg:#fff; --play-fg:#000; --play-r:50%; --play-bd:2px solid #000;
+  --logo-bg:#000; --logo-fg:#fff; --logo-r:4px; --sw-bg:#fff; --sw-bd:#000; --sw-knob:#000; --sw-knob-on:#fff; --sw-on-bg:#000;
+  --toast-bg:#fff; --toast-text:#000; --toast-bd:2px solid #000; --sb-thumb:#000; --sb-track:#fff; --sb-bd:2px solid #fff; }
+[data-theme="mac"] .panel { border: 2px solid #000; box-shadow: 3px 3px 0 #000; padding-top: 0; }
+[data-theme="mac"] .panel > h2 { display: flex; align-items: center; gap: 10px; margin: 0 -18px 14px; padding: 5px 12px; border-bottom: 2px solid #000; }
+[data-theme="mac"] .panel > h2::before, [data-theme="mac"] .panel > h2::after { content: ""; flex: 1; height: 12px; background: repeating-linear-gradient(#000 0 1px, transparent 1px 3px); }
+[data-theme="mac"] .link { text-decoration: underline; } [data-theme="mac"] .switch.on::after { box-shadow: inset 0 0 0 2px #000; }
+[data-theme="mac"] .brand .logo, [data-theme="mac"] .tag { border: 1px solid #000; } [data-theme="mac"] .tag { background: #fff; color: #000; }
+[data-theme="mac"] .bar2 { background: #fff; border: 1px solid #000; border-radius: 0; } [data-theme="mac"] .bar2 i { background: repeating-linear-gradient(90deg, #000 0 2px, #fff 2px 3px); }
+
+/* ===== Light: clean, YouTube-ish ===== */
+[data-theme="classic"] { --bg:#fff; --surface:#f7f7f8; --surface-2:#f0f0f1; --surface-3:#e3e3e6; --line:#e6e6e9; --text:#0f0f10; --muted:#5f5f68; --faint:#92929c; --accent:#e62117; --on-accent:#fff; --link:#065fd4;
+  --r:12px; --r-sm:8px; --r-pill:999px; --chrome:#fff; --pop:#fff; --pop-sh:0 10px 34px rgba(0,0,0,.18); --thumb-sh-h:0 8px 22px rgba(0,0,0,.16);
+  --ctl:#f0f0f1; --ctl-h:#e3e3e6; --pri:var(--accent); --pri-text:#fff; --on-bg:#0f0f10; --on-text:#fff; --in-bg:#f4f4f5; --desc-fade:#fff; --sel-bg:#f0f0f1; --sel-text:#0f0f10;
+  --toast-bg:#0f0f10; --toast-text:#fff; --sw-on-bg:#fde3e1; --sb-thumb:#d4d4d8; --sb-r:6px; --sb-bd:2px solid #fff; --logo-r:5px; }
+
+/* ===== 2-bit: pure black and white ===== */
+[data-theme="bit"] { --bg:#000; --surface:#000; --surface-2:#000; --surface-3:#fff; --line:#fff; --text:#fff; --muted:#fff; --faint:#fff; --accent:#fff; --on-accent:#000;
+  --font:var(--mono); --fs:13.5px; --fw:700; --r:0px; --r-sm:0px; --r-pill:0px; --hov-lift:0px; --chrome:#000; --pop:#000; --pop-bd:1px solid #fff;
+  --ctl:transparent; --ctl-bd:#fff; --ctl-h:#fff; --ctl-text-h:#000; --ghost-h:#fff; --ghost-text-h:#000; --nav-on:#fff; --nav-on-text:#000; --nav-bar:none;
+  --pri:#fff; --pri-text:#000; --on-bg:#fff; --on-text:#000; --sel-bg:#fff; --sel-text:#000; --desc-fade:#000; --thumb-bd:1px solid #fff; --thumb-sh-h:4px 4px 0 #fff; --player-bd:1px solid #fff;
+  --skel-bg:repeating-conic-gradient(#fff 0 25%, #000 0 50%) 0 0/4px 4px; --sb-thumb:#fff; --sw-knob:#fff; --sw-on-bg:transparent; --toast-bd:1px solid #fff; --toast-bg:#000; --toast-text:#fff; }
+[data-theme="bit"] .bar2 { background: #000; border: 1px solid #fff; } [data-theme="bit"] .tag { background: #fff; color: #000; } [data-theme="bit"] .avatar { background: #000; }
+[data-theme="bit"] .link { text-decoration: underline; } [data-theme="bit"] h1, [data-theme="bit"] h2, [data-theme="bit"] .rhead { text-transform: uppercase; letter-spacing: .04em; }

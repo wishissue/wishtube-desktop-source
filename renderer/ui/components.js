@@ -45,21 +45,19 @@ export const videoMenu = (v, refresh) => [
 ];
 
 export function card(v, i = 0, { why, onHide, observe } = {}) {
+  const ago = fmtAgo(v.date), go2 = e => e.stopPropagation();
   const el = h('a.card', { href: '#' + watchPath(v), style: { '--i': i }, dataset: { id: v.id },
     oncontextmenu: e => { e.preventDefault(); contextMenu(e.clientX, e.clientY, videoMenu(v, onHide)); } },
     thumb(v),
-    h('div.meta',
-      h('a', { href: '#' + creatorPath(v), onclick: e => e.stopPropagation() }, avatar(v.creator)),
-      h('div.grow', h('div.title', { title: v.title }, v.title),
-        h('div.sub', h('a', { href: '#' + creatorPath(v), onclick: e => e.stopPropagation() }, v.creator), ' · ', sub(v)),
-        why?.length ? h('div.why', icon('sparkle', 12), why[0]) : null)),
+    h('div.meta', h('div.grow', h('div.title', { title: v.title }, v.title),
+      h('div.sub', { title: why?.[0] ? 'Shown because: ' + why[0] : '' }, h('a', { href: '#' + creatorPath(v), onclick: go2 }, v.creator), ago ? ' · ' + ago : null))),
     h('button.iconbtn.cardmenu', { title: 'More', onclick: e => { e.preventDefault(); e.stopPropagation(); const r = e.currentTarget.getBoundingClientRect(); contextMenu(r.left - 170, r.bottom, videoMenu(v, onHide)); } }, icon('more', 18)));
   observe?.(el, v);
   return el;
 }
 
-export const mini = (v, i = 0, why) => h('a.mini', { href: '#' + watchPath(v), style: { '--i': i } }, thumb(v),
-  h('div', h('div.title', v.title), h('div.sub', v.creator), h('div.sub', sub(v)), why ? h('div.why', why) : null));
+export const mini = (v, i = 0, why) => h('a.mini', { href: '#' + watchPath(v), style: { '--i': i }, title: why ? 'Shown because: ' + why : '' }, thumb(v),
+  h('div', h('div.title', v.title), h('div.sub', v.creator), h('div.sub', sub(v))));
 
 export function skeletons(n = 12) { return h('div.grid', Array.from({ length: n }, () => h('div', h('div.skel', { style: { aspectRatio: '16/9' } }), h('div.skel', { style: { height: '14px', margin: '12px 0 6px', width: '85%' } }), h('div.skel', { style: { height: '12px', width: '55%' } })))); }
 

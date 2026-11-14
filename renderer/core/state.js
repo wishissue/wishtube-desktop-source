@@ -1,4 +1,5 @@
 import { Ranker } from '../rec/engine.js';
+import { normalizeTheme } from './themes.js';
 import { SOURCE_IDS, creatorKey } from './models.js';
 
 const DEFAULTS = {
@@ -29,14 +30,15 @@ export const state = {
   flushProfile() { window.wt.set('profile', this.ranker.toJSON()); },
 
   applyTheme() {
-    const r = document.documentElement; let t = this.settings.theme;
-    if (t === 'dark') t = 'terminal'; else if (t === 'light') t = 'classic'; else if (t === 'system') t = matchMedia('(prefers-color-scheme: light)').matches ? 'classic' : 'terminal';
-    if (!['terminal', 'glass', 'bit', 'classic'].includes(t)) t = 'terminal';
-    r.dataset.theme = t;
-    if (this.settings.accent && this.settings.accent !== '#7c8cff') r.style.setProperty('--accent', this.settings.accent); else r.style.removeProperty('--accent');
-    r.classList.toggle('no-motion', !this.settings.motion);
-    document.body?.classList.toggle('compact', this.settings.density === 'compact');
-    document.body?.classList.toggle('collapsed', !this.settings.sidebar);
+    const r = document.documentElement, t = normalizeTheme(this.settings.theme);
+    const apply = () => {
+      r.dataset.theme = t;
+      if (this.settings.accent && this.settings.accent !== '#7c8cff') r.style.setProperty('--accent', this.settings.accent); else r.style.removeProperty('--accent');
+      r.classList.toggle('no-motion', !this.settings.motion);
+    };
+    // smooth cross-fade between themes (Chromium View Transitions), skipped on first paint and with motion off
+    if (this._themed && this._themed !== t && this.settings.motion && document.startViewTransition) document.startViewTransition(apply); else apply();
+    this._themed = t;
   },
 
   follows() { return new Set(Object.keys(this.lib.follows)); },

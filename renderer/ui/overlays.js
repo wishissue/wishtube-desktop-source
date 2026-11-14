@@ -4,6 +4,7 @@ import { state } from '../core/state.js';
 import { pool } from '../rec/pool.js';
 import { tokens } from '../rec/text.js';
 import { go, watchPath } from './components.js';
+import { THEMES } from '../core/themes.js';
 
 const overlay = () => document.getElementById('overlay');
 export const closeOverlay = () => { clear(overlay()); };
@@ -14,7 +15,7 @@ export function palette() {
   const cmds = [
     { t: 'Home', ic: 'home', run: () => go('/') }, { t: 'Following', ic: 'users', run: () => go('/following') }, { t: 'Library', ic: 'library', run: () => go('/library/history') },
     { t: 'Downloads', ic: 'download', run: () => go('/downloads') }, { t: 'Settings', ic: 'settings', run: () => go('/settings') },
-    ...['terminal', 'glass', 'bit', 'classic'].map(t => ({ t: 'Theme: ' + t, ic: 'sparkle', run: () => { state.settings.theme = t; state.saveSettings(); } })),
+    ...THEMES.map(t => ({ t: 'Theme: ' + t.name, ic: 'palette', run: () => { state.settings.theme = t.id; state.saveSettings(); } })),
     { t: 'Refresh feed', ic: 'refresh', run: () => { pool.t = 0; go('/'); location.reload(); } },
   ];
   const draw = () => {
