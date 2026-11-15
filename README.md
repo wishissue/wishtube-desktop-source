@@ -26,3 +26,14 @@ For a properly built Windows exe, push a `v*` tag: GitHub Actions builds both on
 
 ## Desktop-only
 Persistent candidate pool (instant start, background refresh, 1500 videos), interest-driven retrieval across all sources, Ctrl+K palette with local search, paste-a-link, full keyboard player, HLS with quality menu, PiP, chapters, captions, native downloads, tray, media keys, single instance, profile export/import.
+
+## What's new
+
+- **Shorts, Music, Videos** are separate areas. A video is only a Short when its provider says so (a `shorts` tag, or portrait dimensions it reports); Music needs a provider Music category/tag or an audio item. Nothing is guessed from duration or title.
+- **Music**: tracks, albums/releases (Internet Archive items have real tracklists), artists/channels, search, queue, shuffle, repeat, background audio, mini-player.
+- **Downloads** rebuilt: resumable HTTP, separate audio+video merged with FFmpeg (no re-encode), HLS, MP3/M4A/Opus extraction, retry, pause/resume, speed/ETA, history. Every finished file is checked with ffprobe.
+- **Comments** (PeerTube, Odysee, Internet Archive reviews): read-only, sort, search, replies, link to the original discussion.
+- **Playlists**, **video queue**, library filter, search filters (type, duration, provider, sort).
+- **Themes**: 11 themes incl. OLED, Material 3, Media Center, Monochrome; accent colours, fonts, text size, density, thumbnail size, corner radius, sidebar layout, custom backgrounds, motion levels.
+
+Downloads use the FFmpeg binaries from `ffmpeg-static` / `ffprobe-static`; if the bundled one cannot run, WishTube falls back to `ffmpeg` on your PATH.

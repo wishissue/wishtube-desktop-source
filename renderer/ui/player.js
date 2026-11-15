@@ -9,7 +9,8 @@ const mod = (x, a, b) => Math.min(b, Math.max(a, x));
  * quality / speed / caption menus, full keyboard map, PiP, MediaSession, and watch-time accounting.
  */
 export class Player {
-  constructor({ video, stream, chapters = [], onTheater, onEnded, onNext, onPrev, onBrowser, startAt = 0, prefs }) {
+  constructor({ video, stream, chapters = [], onTheater, onEnded, onNext, onPrev, onBrowser, startAt = 0, prefs, opts = {} }) {
+    this.o = { speed: 1, skip: 10, captions: false, ...opts };
     this.onNext = onNext; this.onPrev = onPrev; this.onBrowser = onBrowser;
     this.v = video; this.stream = stream; this.chapters = chapters; this.onEnded = onEnded; this.onTheater = onTheater;
     this.watched = 0; this.maxPos = 0; this.last = null; this.urlIdx = 0; this.hls = null; this.startAt = startAt; this.menu = null; this.prefs = prefs;
@@ -29,7 +30,7 @@ export class Player {
     if (!url) return this.fail();
     this.destroyHls(); this.err?.remove();
     const isHls = /\.m3u8(\?|$)/.test(url);
-    const ok = () => { if (this.startAt > 5 && !this.started) { this.media.currentTime = this.startAt; } this.started = true; };
+    const ok = () => { if (this.startAt > 5 && !this.started) { this.media.currentTime = this.startAt; } if (!this.started) { this.media.playbackRate = this.o.speed || 1; if (this.o.captions) this.media.addEventListener('loadedmetadata', () => { const t = this.media.textTracks[0]; if (t) t.mode = 'showing'; }, { once: true }); } this.started = true; };
     if (isHls && window.Hls?.isSupported()) {
       const hls = this.hls = new window.Hls({ maxBufferLength: 60, maxMaxBufferLength: 120, capLevelToPlayerSize: false, startLevel: -1, enableWorker: true, backBufferLength: 90 });
       hls.loadSource(url); hls.attachMedia(this.media);
@@ -138,7 +139,7 @@ export class Player {
       if (e.ctrlKey || e.metaKey || e.altKey) return;
       const k = e.key, dur = m.duration || 0;
       const map = {
-        ' ': () => this.toggle(), k: () => this.toggle(), j: () => this.skip(-10), l: () => this.skip(10), ArrowLeft: () => this.skip(-5), ArrowRight: () => this.skip(5),
+        ' ': () => this.toggle(), k: () => this.toggle(), j: () => this.skip(-this.o.skip), l: () => this.skip(this.o.skip), ArrowLeft: () => this.skip(-5), ArrowRight: () => this.skip(5),
         ArrowUp: () => { m.volume = mod(m.volume + 0.05, 0, 1); this.vol.value = m.volume; this.flash(Math.round(m.volume * 100) + '%'); },
         ArrowDown: () => { m.volume = mod(m.volume - 0.05, 0, 1); this.vol.value = m.volume; this.flash(Math.round(m.volume * 100) + '%'); },
         n: () => this.onNext?.(), p: () => this.onPrev?.(), m: () => this.mute(), f: () => this.fullscreen(), t: () => this.onTheater?.(), i: () => this.pip(), c: () => this.captionsMenu(),
@@ -159,7 +160,7 @@ export class Player {
     if (!('mediaSession' in navigator)) return;
     navigator.mediaSession.metadata = new MediaMetadata({ title: v.title, artist: v.creator, artwork: v.thumb ? [{ src: v.thumb }] : [] });
     navigator.mediaSession.setActionHandler('play', () => this.media.play()); navigator.mediaSession.setActionHandler('pause', () => this.media.pause());
-    navigator.mediaSession.setActionHandler('seekbackward', () => this.skip(-10)); navigator.mediaSession.setActionHandler('seekforward', () => this.skip(10));
+    navigator.mediaSession.setActionHandler('seekbackward', () => this.skip(-this.o.skip)); navigator.mediaSession.setActionHandler('seekforward', () => this.skip(this.o.skip));
     navigator.mediaSession.setActionHandler('nexttrack', next || null); navigator.mediaSession.setActionHandler('previoustrack', prev || null);
   }
 

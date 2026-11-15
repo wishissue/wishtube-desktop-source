@@ -32,3 +32,11 @@ export function parseChapters(desc = '') {
 export const stripHtml = s => (s || '').replace(/<[^>]*>/g, '').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#0?39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>');
 export const qs = (base, params) => { const u = new URL(base); for (const [k, v] of Object.entries(params)) if (v != null) u.searchParams.set(k, v); return u.toString(); };
 export const parseDate = s => { const t = Date.parse(s); return Number.isFinite(t) ? t : 0; };
+
+/* ---- content categories ----
+   A video is a Short only when the provider says so: an explicit "shorts" tag, or portrait dimensions it reported (and a short duration).
+   Duration alone never makes a Short. Music needs a provider "Music" category / tag, or an audio-only item from a music collection. */
+export const SHORT_MAX = 180;
+export const isShort = v => !!v && ((v.portrait === true && v.dur > 0 && v.dur <= SHORT_MAX) || ((v.tags || []).some(t => /^#?shorts?$/i.test(String(t))) && (!v.dur || v.dur <= 240)));
+export const isMusic = v => !!v && !isShort(v) && (v.music === true || (v.cats || []).some(c => /^music$/i.test(c)) || (v.tags || []).some(t => /^music$/i.test(String(t))));
+export const kindOf = v => isShort(v) ? 'shorts' : isMusic(v) ? 'music' : 'video';

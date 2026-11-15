@@ -36,7 +36,11 @@ export function contextMenu(x, y, items) {
   const off = e => { if (!m.contains(e.target)) { m.remove(); removeEventListener('mousedown', off, true); } };
   setTimeout(() => addEventListener('mousedown', off, true), 0);
 }
+const withAudio = f => import('../core/audio.js').then(m => f(m.audio));
 export const videoMenu = (v, refresh) => [
+  { icon: 'play', label: 'Play next', run: () => withAudio(a => { a.add(v, { next: true }); toast('Playing next'); }) },
+  { icon: 'queue', label: 'Add to queue', run: () => withAudio(a => { a.add(v); toast('Added to queue'); }) },
+  { icon: 'listplus', label: 'Add to playlist…', run: () => import('./playlists.js').then(m => m.addToPlaylistDialog(v)) },
   { icon: 'clock', label: state.lib.later[v.id] ? 'Remove from Watch later' : 'Watch later', run: () => { toast(state.toggleList('later', v) ? 'Added to Watch later' : 'Removed'); refresh?.(); } },
   { icon: 'bookmark', label: state.lib.saved[v.id] ? 'Unsave' : 'Save', run: () => toast(state.toggleList('saved', v) ? 'Saved' : 'Removed') },
   { icon: 'ext', label: 'Open original page', run: () => window.wt.openExternal(v.url) },

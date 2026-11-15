@@ -2,12 +2,13 @@ import { h, clear } from './dom.js';
 import { icon } from './icons.js';
 import { state } from '../core/state.js';
 import { sources } from '../sources/manager.js';
-import { SOURCES } from '../core/models.js';
+import { SOURCES, kindOf } from '../core/models.js';
 import { dedupe } from '../rec/engine.js';
 import { card, skeletons, go, watchPath } from './components.js';
 
 export async function search(root, { q }) {
-  let alive = true, sort = 'relevance', page = 0, results = [], filter = null, loading = false;
+  let alive = true, sort = 'relevance', page = 0, results = [], filter = null, loading = false, type = 'all', dur = 'any';
+  const DUR = { any: [0, 1e9], short: [1, 240], medium: [240, 1200], long: [1200, 1e9] };
   const bySrc = {}, grid = h('div.grid'), chips = h('div.chips'), status = h('div.sub'), more = h('div', { style: { textAlign: 'center', margin: '30px 0' } });
 
   if (/^https?:\/\//i.test(q)) {                                          // a pasted link opens directly
@@ -27,9 +28,12 @@ export async function search(root, { q }) {
       const rk = new Map(state.ranker.rank(results, { seed: 1, limit: results.length, hidden: state.hidden(), follows: state.follows() }).map((r, i) => [r.v.id, i]));
       results = [...results].sort((a, b) => (pos.get(a.id) * 0.7 + (rk.get(a.id) ?? 99) * 0.3) - (pos.get(b.id) * 0.7 + (rk.get(b.id) ?? 99) * 0.3));
     }
-    clear(grid); results.filter(v => !state.hidden().videos.has(v.id)).forEach((v, i) => grid.append(card(v, Math.min(i, 14), { onHide: view })));
+    // client-side filters use only what the provider reported: a video with no known duration is never guessed into a duration bucket
+    const [lo, hi] = DUR[dur], shown = results.filter(v => !state.hidden().videos.has(v.id) && (type === 'all' || kindOf(v) === type) && (dur === 'any' || (v.dur > 0 && v.dur >= lo && v.dur < hi)));
+    clear(grid); shown.forEach((v, i) => grid.append(card(v, Math.min(i, 14), { onHide: view })));
     drawChips();
-    status.textContent = loading ? 'Searching…' : results.length ? `${results.length} results` : '';
+    status.textContent = loading ? 'Searching…' : results.length ? (shown.length === results.length ? `${results.length} results` : `${shown.length} of ${results.length} results`) : '';
+    if (!loading && results.length && !shown.length) grid.append(h('div.empty', { style: { gridColumn: '1/-1' } }, h('p', 'Nothing matches these filters. Loaded results that don’t report a duration are excluded when a duration is chosen.')));
     clear(more); if (!loading && results.length) more.append(h('button.btn', { onclick: () => run(page + 1) }, 'Load more'));
   }
   function drawChips() {
@@ -45,7 +49,9 @@ export async function search(root, { q }) {
   }
   root.append(h('div.page',
     h('div.row.wrap', { style: { marginBottom: '16px' } }, h('h1', `Results for “${q}”`), status, h('div.grow'),
-      h('select.input', { style: { minWidth: '140px' }, onchange: e => { sort = e.target.value; run(0); } }, ...[['relevance', 'Relevance'], ['newest', 'Newest'], ['oldest', 'Oldest'], ['popular', 'Most popular']].map(([v, l]) => h('option', { value: v }, l)))),
+      h('select.input', { 'aria-label': 'Type', onchange: e => { type = e.target.value; view(); } }, ...[['all', 'All types'], ['video', 'Videos'], ['shorts', 'Shorts'], ['music', 'Music']].map(([v, l]) => h('option', { value: v }, l))),
+      h('select.input', { 'aria-label': 'Duration', onchange: e => { dur = e.target.value; view(); } }, ...[['any', 'Any length'], ['short', 'Under 4 min'], ['medium', '4–20 min'], ['long', 'Over 20 min']].map(([v, l]) => h('option', { value: v }, l))),
+      h('select.input', { 'aria-label': 'Sort', style: { minWidth: '140px' }, onchange: e => { sort = e.target.value; run(0); } }, ...[['relevance', 'Relevance'], ['newest', 'Newest'], ['oldest', 'Oldest'], ['popular', 'Most popular']].map(([v, l]) => h('option', { value: v }, l)))),
     h('div', { style: { marginBottom: '20px' } }, chips), grid, more));
   drawChips(); run(0);
   return () => { alive = false; };

@@ -25,6 +25,19 @@ export const sources = {
     return null;
   },
   stream: v => by[v.source].resolveStream(v),
+  /** Music across every source that has a music method; `q` empty = discovery. Streams in per source like search(). */
+  music(q, page, onPart) {
+    const ids = active().filter(id => by[id].music);
+    return Promise.all(ids.map(id => safe(id, () => by[id].music(q, page, conf())).then(l => { remember(l); onPart?.(id, l); return l; }))).then(r => r.flat());
+  },
+  /** Shorts: only what providers tag as shorts (or report as portrait). */
+  shorts(page, onPart) {
+    const ids = active().filter(id => by[id].shorts);
+    return Promise.all(ids.map(id => safe(id, () => by[id].shorts(page, conf())).then(l => { remember(l); onPart?.(id, l); return l; }))).then(r => r.flat());
+  },
+  hasComments: v => !!by[v.source]?.comments,
+  comments: (v, o) => by[v.source].comments(v, o),
+  replies: (v, c) => by[v.source].replies ? by[v.source].replies(v, c) : Promise.resolve([]),
   creatorVideos: (src, cid, page = 0) => by[src].creatorVideos(cid, page, conf()).then(remember),
   creatorInfo: (src, cid) => by[src].creatorInfo(cid).catch(() => null),
   caps: id => by[id].caps,

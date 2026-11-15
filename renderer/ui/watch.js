@@ -6,9 +6,12 @@ import { sources } from '../sources/manager.js';
 import { parseChapters, SOURCES } from '../core/models.js';
 import { Player } from './player.js';
 import { browserPlayer } from './browserplayer.js';
+import { downloadDialog } from './downloads.js';
+import { commentsPanel } from './comments.js';
+import { audio } from '../core/audio.js';
 import { avatar, mini, go, watchPath, creatorPath, contextMenu, videoMenu } from './components.js';
 
-const prefs = { volume: 1 };
+const prefs = { volume: null };
 
 export async function watch(root, { id }) {
   let alive = true, player = null, bp = null, related = [], v = state.known.get(id);
@@ -47,13 +50,19 @@ export async function watch(root, { id }) {
   chapters = stream.chapters?.length ? stream.chapters : parseChapters(desc);
   const resume = state.lib.resume[v.id], startAt = resume && v.dur && resume < v.dur * 0.95 ? resume : 0;
 
-  player = new Player({ video: v, stream, chapters, startAt, prefs, onBrowser: openBrowser, onPrev: () => history.back(), onNext: () => related[0] && go(watchPath(related[0].v)), onTheater: () => { page.classList.toggle('theater'); },
-    onEnded: () => { if (state.settings.autoplay && related[0]) { toast(`Up next: ${related[0].v.title.slice(0, 50)}`); setTimeout(() => alive && go(watchPath(related[0].v)), 900); } } });
+  // N / P and auto-advance follow the video queue when this video is part of one (playlist / Play all), otherwise "Up next".
+  const inQueue = () => state.vq.current?.id === v.id && state.vq.length > 1;
+  const goNext = (auto = false) => { if (inQueue()) { const n = state.vq.next(auto); if (n) return go(watchPath(n)); if (auto) return; } if (related[0]) go(watchPath(related[0].v)); };
+  const goPrev = () => { if (inQueue() && state.vq.index > 0) { const n = state.vq.prev(); if (n) return go(watchPath(n)); } history.back(); };
+  player = new Player({ video: v, stream, chapters, startAt, prefs: (prefs.volume ??= state.settings.player.rememberVolume ? state.settings.player.volume ?? 1 : 1, prefs), opts: state.settings.player, onBrowser: openBrowser, onPrev: () => history.back(), onNext: () => related[0] && go(watchPath(related[0].v)), onTheater: () => { page.classList.toggle('theater'); },
+    onNext: () => goNext(false), onPrev: goPrev,
+    onEnded: () => { if (!state.settings.autoplay) return; const nx = inQueue() ? state.vq.items[state.vq.index + 1] || (state.vq.repeat !== 'off' && state.vq.items[0]) : related[0]?.v; if (nx) { toast(`Up next: ${nx.title.slice(0, 50)}`); setTimeout(() => alive && goNext(true), 900); } } });
   player.addMediaSession(v, () => history.back(), () => related[0] && go(watchPath(related[0].v)));
   player.media.addEventListener('loadedmetadata', () => { if (!v.dur && isFinite(player.media.duration)) v.dur = player.media.duration; });
-  clear(player$).append(player.el);
+  player.media.addEventListener('play', () => audio.pause());          // video and background audio never play together
+  clear(player$).append(player.el); if (state.settings.player.theater) page.classList.add('theater');
   player.el.focus({ preventScroll: true });
-  const unmedia = window.wt.on('media', c => { if (c === 'toggle') player.toggle(); else if (c === 'next' && related[0]) go(watchPath(related[0].v)); else if (c === 'prev') history.back(); });
+  const unmedia = window.wt.on('media', c => { if (c === 'toggle') player.toggle(); else if (c === 'next') goNext(false); else if (c === 'prev') goPrev(); });
   const chapEls = [];
   player.onTick = t => { const i = chapters.findLastIndex(c => c.t <= t); chapEls.forEach((e, j) => e.classList.toggle('on', j === i)); };
   let lastSave = 0; const saver = setInterval(() => { const r = player.report(); if (r.seconds > 3 && Date.now() - lastSave > 4000) { lastSave = Date.now(); state.setResume(v.id, r.position); } }, 5000);
@@ -67,22 +76,24 @@ export async function watch(root, { id }) {
     const folB = h('button.btn', { class: following() ? 'on' : 'pri', onclick: async () => { const on = state.toggleFollow(v, creatorInfo); folB.className = 'btn' + (on ? ' on' : ' pri'); folB.lastChild.textContent = on ? 'Following' : 'Follow'; toast(on ? `Following ${v.creator}` : 'Unfollowed'); } }, icon(following() ? 'check' : 'plus', 16), following() ? 'Following' : 'Follow');
     let creatorInfo = {}; sources.creatorInfo(v.source, v.creatorId).then(i => { if (!alive || !i) return; creatorInfo = i; avatarHost.replaceChildren(avatar(v.creator, i.avatar, 42)); if (i.followers != null) subs.textContent = `${i.followers.toLocaleString()} followers`; });
     const avatarHost = h('div', avatar(v.creator, null, 42)), subs = h('div.sub', SOURCES[v.source].label);
-    const dl = st?.download ? h('button.btn.iconly', { title: 'Download', onclick: async () => { await window.wt.download({ url: st.download, title: v.title, videoId: v.id }); toast('Download started. See Downloads.'); } }, icon('download', 18)) : null;
+    const dl = st?.options?.length ? h('button.btn.iconly', { title: 'Download', 'aria-label': 'Download', onclick: () => downloadDialog(v, st) }, icon('download', 18)) : null;
+    const audioB = h('button.btn.iconly', { title: 'Play as audio in the background', 'aria-label': 'Play as audio', onclick: () => { player?.media?.pause(); audio.playNow(v); toast('Playing as audio. You can keep browsing.'); } }, icon('music', 18));
     const lic = v.license?.name && v.license.name !== 'Check rights' ? h('span.pill' + (v.license.reuse === 'remix' ? '.ok' : ''), v.license.name) : null;
     const descEl = h('div.desc', { onclick: e => { if (e.target.tagName !== 'A') descEl.classList.add('open'); } }, `${[fmtViews(v.views), fmtAgo(v.date)].filter(Boolean).join(' · ')}\n\n`, ...linkify(desc || 'No description.', t => player?.seekTo(t)));
     clear(info).append(
       h('div.vtitle', v.title),
       h('div.row.wrap', { style: { margin: '10px 0 12px' } }, h('a', { href: '#' + creatorPath(v), class: 'row' }, avatarHost, h('div', h('b', v.creator), subs)), folB, h('div.grow'), lic,
-        h('div.actions', { style: { margin: 0 } }, likeB, saveB, laterB, dl,
+        h('div.actions', { style: { margin: 0 } }, likeB, saveB, laterB, audioB, dl,
           h('button.btn.iconly', { title: 'More', onclick: e => { const r = e.currentTarget.getBoundingClientRect(); contextMenu(r.left - 150, r.bottom + 4, videoMenu(v, () => { refreshRelated(); })); } }, icon('more', 18)))),
       descEl,
+      commentsPanel(v),
       chapters.length ? h('div.chapters', h('h2', { style: { margin: '14px 0 4px' } }, 'Chapters'), ...chapters.map(c => { const b = h('button.chapter', { onclick: () => player?.seekTo(c.t) }, h('span.t', fmtDur(c.t)), c.title); chapEls.push(b); return b; })) : '');
   }
 
   return () => {
     alive = false; clearInterval(saver); unmedia?.(); bp?.destroy();
     if (!player) return;
-    const r = player.report(); player.destroy();
+    const r = player.report(); if (state.settings.player.rememberVolume && prefs.volume != null) { state.settings.player.volume = prefs.volume; state.saveSettings(); } player.destroy();
     if (r.seconds >= 1) {
       state.ranker.record(v, 'watch', { completion: r.completion, seconds: r.seconds });
       state.addHistory(v, r.position, r.duration || v.dur);

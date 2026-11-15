@@ -5,6 +5,8 @@ import { SOURCES } from '../core/models.js';
 import { FEATURES } from '../rec/engine.js';
 import { pool } from '../rec/pool.js';
 import { THEMES, normalizeTheme } from '../core/themes.js';
+import { lookPanels, playerPanel } from './appearance.js';
+import { WISHISSUE } from '../core/credits.js';
 
 const LANGS = [['en', 'English'], ['es', 'Español'], ['fr', 'Français'], ['de', 'Deutsch'], ['pt', 'Português'], ['it', 'Italiano'], ['nl', 'Nederlands'], ['ru', 'Русский'], ['ja', '日本語'], ['zh', '中文'], ['ko', '한국어'], ['ar', 'العربية'], ['hi', 'हिन्दी']];
 const WLABEL = { interest: 'Your interests', session: 'This session', creator: 'Creators you like', follow: 'Follows', quality: 'Quality', velocity: 'Trending', fresh: 'Freshness', novelty: 'Novelty', durFit: 'Length fit', srcPref: 'Source habit', small: 'Small creators', lang: 'Language', seen: 'Already seen', neg: 'Things you dislike' };
@@ -30,9 +32,7 @@ export function settings(root) {
 
   root.append(h('div.page', { style: { maxWidth: '820px' } }, h('h1', { style: { marginBottom: '18px' } }, 'Settings'),
 
-    h('div.panel', h('h2', 'Look'), themePick,
-      field('Animations', null, toggle(() => S.motion, v => { S.motion = v; })),
-      glassControls()),
+    ...lookPanels(themePick),
 
     h('div.panel', h('h2', 'Feed'),
       field('Explore new things', null, slider('explore')), field('Prefer fresh videos', null, slider('freshness')), field('Mix it up', null, slider('diversity')),
@@ -45,6 +45,8 @@ export function settings(root) {
       field('PeerTube instance', null, h('input.input', { value: S.ptInstance, onchange: e => { const v = e.target.value.trim().replace(/\/$/, ''); if (!/^https:\/\/[\w.-]+\.[a-z]{2,}$/i.test(v)) { toast('Enter a https:// address'); e.target.value = S.ptInstance; return; } S.ptInstance = v; save(); } })),
       field('Mature content', null, toggle(() => S.mature, v => { S.mature = v; }))),
 
+    playerPanel(),
+
     h('div.panel', h('h2', 'Playback'),
       field('Autoplay next', null, toggle(() => S.autoplay, v => { S.autoplay = v; })),
       field('Keep playing in tray', null, toggle(() => S.closeToTray, v => { S.closeToTray = v; })),
@@ -54,19 +56,11 @@ export function settings(root) {
       h('div.row.wrap', h('button.btn', { onclick: async () => { if (await window.wt.exportFile('wishtube-profile.json', state.exportProfile())) toast('Exported'); } }, 'Export'),
         h('button.btn', { onclick: async () => { const t = await window.wt.importFile(); if (!t) return; try { await state.importProfile(t); toast('Imported'); setTimeout(() => location.reload(), 600); } catch (e) { toast('Import failed: ' + e.message); } } }, 'Import'),
         h('button.btn', { onclick: async () => { pool.t = 0; pool.videos = []; window.wt.set('pool', null); toast('Cache cleared'); } }, 'Clear feed cache')),
-      h('p.sub', { style: { marginTop: '12px' } }, 'Everything stays on this computer. No account, no analytics.'))));
+      h('p.sub', { style: { marginTop: '12px' } }, 'Everything stays on this computer. No account, no analytics.')),
 
-  function glassControls() {
-    const box = h('div');
-    const live = (k, min, max, step) => h('input', { type: 'range', min, max, step, value: S[k], oninput: e => { S[k] = +e.target.value; document.documentElement.style.setProperty(k === 'glassBlur' ? '--glass-blur' : '--glass-tint', k === 'glassBlur' ? S[k] + 'px' : S[k]); }, onchange: save });
-    const draw = () => {
-      clear(box); if (normalizeTheme(S.theme) !== 'glass') return;
-      box.append(field('Glass blur', null, live('glassBlur', 4, 60, 1)), field('Glass tint', 'Lower is clearer', live('glassTint', 0, 0.4, 0.01)),
-        field('See-through window', state.nativeGlass ? 'On: the desktop shows through the window' : 'Uses real OS glass (Windows 11 acrylic, macOS vibrancy, Linux compositor). Needs a restart to apply.', h('div.row', toggle(() => S.nativeGlass, v => { S.nativeGlass = v; }),
-          h('button.btn.sm', { onclick: async () => { await window.wt.set('settings', S); window.wt.relaunch(); } }, 'Restart'))));
-    };
-    state.bus.on('settings', draw); draw(); return box;
-  }
+    h('div.panel', h('h2', 'WishIssue'),
+      h('div.row.wrap', { style: { gap: '8px' } }, ...[['github', 'GitHub', 'github'], ['youtube', 'YouTube', 'youtube'], ['discord', 'Discord', 'msg'], ['donate', 'Donate', 'coffee']].filter(([k]) => WISHISSUE[k]).map(([k, l, ic]) => h('button.btn', { onclick: () => window.wt.openExternal(WISHISSUE[k]) }, icon(ic, 16), l))))));
+
   function move(i, d) { const a = S.order, j = i + d; [a[i], a[j]] = [a[j], a[i]]; save(); clear(root); settings(root); }
   drawTaste();
   return () => {};

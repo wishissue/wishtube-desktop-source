@@ -12,17 +12,27 @@ import { library, following, creator } from './ui/library.js';
 import { settings } from './ui/settings.js';
 import { downloads } from './ui/downloads.js';
 import { palette, onboarding, closeOverlay } from './ui/overlays.js';
+import { music, album } from './ui/music.js';
+import { shorts } from './ui/shorts.js';
+import { playlistPage } from './ui/playlists.js';
+import { mountMiniPlayer } from './ui/miniplayer.js';
+import { audio } from './core/audio.js';
 
 const ROUTES = [
   [/^\/$/, () => home, 'home'], [/^\/search\/(.*)$/, m => (r) => search(r, { q: decodeURIComponent(m[1]) }), null],
   [/^\/watch\/(.*)$/, m => (r) => watch(r, { id: decodeURIComponent(m[1]) }), null],
   [/^\/library(?:\/(\w+))?$/, m => (r) => library(r, { tab: m[1] }), null], [/^\/following$/, () => following, 'following'],
   [/^\/creator\/(\w+)\/(.*)$/, m => (r) => creator(r, { src: m[1], cid: decodeURIComponent(m[2]) }), null],
+  [/^\/shorts$/, () => shorts, 'shorts'], [/^\/music$/, () => music, 'music'], [/^\/album\/(.*)$/, m => (r) => album(r, { id: decodeURIComponent(m[1]) }), 'music'], [/^\/playlist\/(\w+)$/, m => (r) => playlistPage(r, { id: m[1] }), 'library'],
   [/^\/settings$/, () => settings, 'settings'], [/^\/downloads$/, () => downloads, 'downloads'],
 ];
 let cleanup = null, token = 0, currentNav = null;
 
+const bar = () => document.getElementById('route-bar');
+const progress = { start() { const b = bar(); if (!b) return; b.classList.remove('done'); void b.offsetWidth; b.classList.add('go'); }, end() { const b = bar(); if (!b) return; b.classList.remove('go'); b.classList.add('done'); setTimeout(() => b.classList.remove('done'), 700); } };
+
 async function route() {
+  progress.start();
   const path = decodeURIComponent(location.hash.slice(1)) === '' ? '/' : location.hash.slice(1);
   const view = $('#view'), my = ++token;
   try { await cleanup?.(); } catch (e) { console.error(e); } cleanup = null;
@@ -30,7 +40,7 @@ async function route() {
   for (const [re, mk, nav] of ROUTES) {
     const m = path.match(re); if (!m) continue;
     currentNav = nav ?? (path.startsWith('/library') ? 'library' : null); setNav(currentNav);
-    const r = await mk(m)(view);
+    let r; try { r = await mk(m)(view); } finally { if (my === token) progress.end(); }
     if (my === token) cleanup = r; else await r?.();
     if (!/^\/(watch|search)/.test(path) || true) view.scrollTo({ top: 0, behavior: 'instant' });
     return;
@@ -40,11 +50,13 @@ async function route() {
 
 function setNav(id) { document.querySelectorAll('#rail .nav').forEach(n => n.classList.toggle('on', n.dataset.id === id)); }
 
+const NAV = [['home', 'home', 'Home', '/'], ['shorts', 'shorts', 'Shorts', '/shorts'], ['music', 'music', 'Music', '/music'], ['following', 'users', 'Following', '/following'], ['library', 'library', 'Library', '/library/history'], ['downloads', 'download', 'Downloads', '/downloads']];
 function rail() {
   const nav = (id, ic, label, path, cls = '') => h('a.nav' + cls, { href: '#' + path, dataset: { id }, title: label }, icon(ic, 22), h('span', label));
-  clear($('#rail')).append(nav('home', 'home', 'Home', '/'), nav('following', 'users', 'Following', '/following'), nav('library', 'library', 'Library', '/library/history'),
-    nav('downloads', 'download', 'Downloads', '/downloads'), nav('settings', 'settings', 'Settings', '/settings', '.end'));
+  clear($('#rail')).append(...NAV.filter(([id]) => state.settings.nav?.[id] !== false).map(n => nav(...n)), nav('settings', 'settings', 'Settings', '/settings', '.end'));
+  setNav(currentNav);
 }
+state.bus.on('settings', () => rail());
 
 function shell() {
   const sugg = h('div.sugg', { hidden: true, role: 'listbox' }); let items = [], sel = -1;
@@ -82,19 +94,23 @@ addEventListener('keydown', e => {
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); palette(); }
   else if ((e.ctrlKey || e.metaKey) && e.key === ',') { e.preventDefault(); go('/settings'); }
   else if (e.key === '/' && !typing) { e.preventDefault(); $('#q').focus(); }
-  else if (e.key === 'Escape') closeOverlay();
+  else if (e.key === 'Escape') { closeOverlay(); document.getElementById('qdrawer')?.remove(); }
   else if (e.altKey && e.key === 'ArrowLeft') history.back(); else if (e.altKey && e.key === 'ArrowRight') history.forward();
 });
+const fillRange = r => r.style.setProperty('--p', ((r.value - r.min) / ((r.max - r.min) || 1)) * 100 + '%');
+addEventListener('input', e => { if (e.target.type === 'range') fillRange(e.target); }, true);
+new MutationObserver(() => document.querySelectorAll('input[type=range]').forEach(r => { if (!r.style.getPropertyValue('--p')) fillRange(r); })).observe(document.body, { childList: true, subtree: true });
 addEventListener('hashchange', route);
 addEventListener('beforeunload', () => { state.flushProfile(); });
 window.addEventListener('unhandledrejection', e => console.warn('unhandled', e.reason));
 
 (async function init() {
-  await state.load(); await pool.load();
+  await state.load(); await pool.load(); audio.restore(await window.wt.get('queue', null)); mountMiniPlayer();
   window.wt.on('open-url', async url => { const v = await sources.resolveUrl(url); if (v) go(`/watch/${encodeURIComponent(v.id)}`); });
   window.wt.on('fullscreen', () => {});
   const dlBadge = window.wt.on('dl:update', d => { if (d.state === 'done') import('./ui/dom.js').then(m => m.toast('Download finished: ' + d.title.slice(0, 40))); });
   shell(); await route();
+  const sp = document.getElementById('splash'); if (sp) { sp.classList.add('out'); setTimeout(() => sp.remove(), 600); }
   if (!state.settings.onboarded) onboarding(() => route());
   setInterval(() => state.ranker.dirty && (state.ranker.dirty = false, state.flushProfile()), 30000);
 })();

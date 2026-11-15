@@ -50,11 +50,10 @@ test('licenses for everything vendored are shipped', () => {
   for (const n of ['Inter', 'JetBrainsMono', 'NotoSans', 'Lucide', 'OpenProps', '7.css', 'XP.css', 'system.css']) assert.ok(have.some(f => f.startsWith(n)), n);
 });
 
-test('glass: has orbs, tunable blur/tint vars, and a native see-through mode', () => {
-  const css = read('themes.css'), html = read('index.html');
-  assert.match(css, /--glass-blur/); assert.match(css, /--glass-tint/);
-  assert.match(css, /\.native-glass\[data-theme="glass"\]/);
-  assert.equal((html.match(/class="orb o\d"/g) || []).length, 3);
+test('glass and WishTube Blue themes are gone: no theme, styles, orbs or native-window code, and old saves migrate', () => {
+  const css = read('themes.css'), html = read('index.html'), main = readFileSync(new URL('../main/main.cjs', import.meta.url), 'utf8');
+  assert.ok(!/data-theme="glass"/.test(css)); assert.ok(!/class="orb/.test(html)); assert.ok(!/glassMode|backgroundMaterial|vibrancy/.test(main));
+  assert.ok(!THEMES.some(t => t.id === 'glass')); assert.equal(normalizeTheme('glass'), 'oled'); assert.equal(normalizeTheme('wishblue'), 'oled'); assert.ok(!THEMES.some(t => t.id === 'wishblue'));
 });
 
 test('main process allows the fullscreen permission and the search icon is a real button', () => {

@@ -3,7 +3,7 @@ import { icon } from './icons.js';
 import { state } from '../core/state.js';
 import { pool } from '../rec/pool.js';
 import { MODES } from '../rec/engine.js';
-import { creatorKey } from '../core/models.js';
+import { creatorKey, isShort, isMusic } from '../core/models.js';
 import { card, skeletons, infinite, shelf } from './components.js';
 
 let mode = 'foryou', seed = Date.now() % 100000;
@@ -16,7 +16,7 @@ export function home(root) {
     if (e.isIntersecting) visible.set(v.id, setTimeout(() => shown.add(v), 1000)); else { clearTimeout(visible.get(v.id)); visible.delete(v.id); }
   }), { root: document.getElementById('view'), threshold: 0.6 });
   const observe = (el, v) => { el._v = v; io.observe(el); el.addEventListener('click', () => { clicked = v.id; }); };
-  const enabled = () => pool.videos.filter(v => state.settings.sources[v.source]);
+  const enabled = () => pool.videos.filter(v => state.settings.sources[v.source] && !isShort(v) && !isMusic(v));   // Home is long-form; Shorts and Music have their own pages
 
   function draw() {
     if (!alive) return; stop?.(); clear(body);
@@ -30,7 +30,7 @@ export function home(root) {
     const mk = (v, i) => card(v, i, { onHide: draw, observe, why: ranked.find(r => r.v.id === v.id)?.reasons });
     if (mode === 'foryou') {
       // Continue watching
-      const cont = state.lib.history.filter(e => e.dur && e.progress / e.dur > 0.03 && e.progress / e.dur < 0.93).slice(0, 12).map(e => e.video).filter(v => !state.hidden().videos.has(v.id));
+      const cont = state.lib.history.filter(e => e.dur && !isShort(e.video) && !isMusic(e.video) && e.progress / e.dur > 0.03 && e.progress / e.dur < 0.93).slice(0, 12).map(e => e.video).filter(v => !state.hidden().videos.has(v.id));
       if (cont.length) { cont.forEach(v => used.add(v.id)); body.append(shelf('Continue', null, cont.map((v, i) => mk(v, i)))); }
       // New from follows
       const fol = state.follows();

@@ -37,26 +37,11 @@ async function netJson(url, opts = {}) {
   throw last;
 }
 
-/** Real see-through glass needs the OS: Windows 11 acrylic, macOS vibrancy, or a transparent window on Linux compositors.
- *  It can only be chosen when the window is created, so the choice is read from saved settings at launch. */
-function glassMode() {
-  const s = store?.get('settings', {}) || {};
-  if (s.theme !== 'glass' || s.nativeGlass === false) return null;
-  if (process.platform === 'win32') return Number(require('node:os').release().split('.')[2]) >= 22000 ? 'acrylic' : null;
-  if (process.platform === 'darwin') return 'vibrancy';
-  return 'transparent';
-}
-let glass = null;
-
 function createWindow() {
-  glass = glassMode();
-  const glassOpts = glass === 'acrylic' ? { backgroundMaterial: 'acrylic', backgroundColor: '#00000000' }
-    : glass === 'vibrancy' ? { vibrancy: 'under-window', backgroundColor: '#00000000' }
-    : glass === 'transparent' ? { transparent: true, backgroundColor: '#00000000' } : { backgroundColor: '#0e0f12' };
   win = new BrowserWindow({
     width: 1360, height: 860, minWidth: 900, minHeight: 600,
-    ...glassOpts, title: 'WishTube', autoHideMenuBar: true, show: false,
-    icon: path.join(__dirname, '../renderer/icon.png'),
+    backgroundColor: '#0e0f12', title: 'WishTube', autoHideMenuBar: true, show: false,
+    icon: path.join(__dirname, '../renderer/icon-512.png'),
     webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true, backgroundThrottling: false },
   });
   win.removeMenu();
@@ -73,7 +58,7 @@ function createWindow() {
 
 app.whenReady().then(() => {
   store = new Store(path.join(app.getPath('userData'), 'data'));
-  downloads = new Downloads(app, () => win, UA, () => store.get('settings', {}).downloadDir);
+  downloads = new Downloads({ app, getWin: () => win, ua: UA, getDir: () => store.get('settings', {}).downloadDir, store });
 
   // Media hosts rarely send CORS headers; hls.js and captions need them. Applied to our own window only.
   session.defaultSession.webRequest.onHeadersReceived((d, cb) => {
@@ -93,13 +78,16 @@ app.whenReady().then(() => {
   h('store:get', (_e, key, def) => store.get(key, def));
   h('store:set', (_e, key, val) => { store.set(key, val); return true; });
   h('store:path', () => store.dir);
-  h('dl:start', (_e, item) => downloads.start(item));
-  h('dl:cancel', (_e, id) => downloads.cancel(id));
-  h('dl:list', () => downloads.list());
-  h('dl:reveal', (_e, file) => { shell.showItemInFolder(file); });
+  const id = x => (typeof x === 'string' && /^dl\d{1,9}$/.test(x) ? x : null);
+  h('dl:start', (_e, item) => { try { return { id: downloads.start(item) }; } catch (e) { return { error: e.message }; } });
+  h('dl:pause', (_e, x) => !!id(x) && downloads.pause(x)); h('dl:resume', (_e, x) => !!id(x) && downloads.resume(x));
+  h('dl:cancel', (_e, x) => !!id(x) && downloads.cancel(x)); h('dl:retry', (_e, x) => !!id(x) && downloads.retry(x));
+  h('dl:remove', (_e, x) => !!id(x) && downloads.remove(x)); h('dl:clear', () => { downloads.clearFinished(); return true; });
+  h('dl:list', () => downloads.list()); h('dl:caps', () => downloads.caps());
+  h('dl:reveal', (_e, file) => { if (typeof file === 'string' && downloads.owns(file)) shell.showItemInFolder(file); });   // only files WishTube itself downloaded
+  h('dl:open', (_e, file) => { if (typeof file === 'string' && downloads.owns(file) && fs.existsSync(file)) return shell.openPath(file); });
   h('open:external', (_e, url) => { if (/^https?:/.test(url)) shell.openExternal(url); });
   h('win:fullscreen', (_e, on) => { win.setFullScreen(!!on); });
-  h('win:glass', () => glass);
   h('app:relaunch', () => { app.relaunch(); quitting = true; app.quit(); });
   h('win:alwaysOnTop', (_e, on) => { win.setAlwaysOnTop(!!on, 'floating'); return win.isAlwaysOnTop(); });
   h('file:export', async (_e, name, text) => {
@@ -117,7 +105,7 @@ app.whenReady().then(() => {
 
   createWindow();
   try {
-    const img = nativeImage.createFromPath(path.join(__dirname, '../renderer/icon.png')).resize({ width: 22, height: 22 });
+    const img = nativeImage.createFromPath(path.join(__dirname, '../renderer/icon-512.png')).resize({ width: 22, height: 22 });
     tray = new Tray(img);
     tray.setToolTip('WishTube');
     tray.setContextMenu(Menu.buildFromTemplate([

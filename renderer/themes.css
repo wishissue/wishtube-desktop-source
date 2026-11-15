@@ -8,39 +8,6 @@
   --pri:var(--accent); --pri-text:#000; --on-bg:var(--accent); --on-text:#000; --on-bd:var(--accent); --desc-fade:#000; --sw-knob-on:var(--accent); --sw-on-bg:transparent; }
 [data-theme="terminal"] .thumb, [data-theme="terminal"] .avatar { border: 1px solid var(--line); }
 
-/* ===== Glass: dark liquid glass over soft colour ===== */
-[data-theme="glass"] { --bg:#070912; --surface:rgba(255,255,255,.07); --surface-2:rgba(255,255,255,.11); --surface-3:rgba(255,255,255,.18); --line:rgba(255,255,255,.16); --text:#f5f7fb; --muted:#b6bccb; --faint:#7f8596; --accent:#9ec5ff; --on-accent:#0a0f1f;
-  --bg-image: radial-gradient(60vw 55vh at 10% 6%, rgba(59,91,219,.55), transparent 65%), radial-gradient(50vw 50vh at 92% 24%, rgba(192,38,211,.42), transparent 65%), radial-gradient(60vw 50vh at 42% 104%, rgba(14,165,165,.42), transparent 65%);
-  --r:16px; --r-sm:12px; --r-pill:999px; --blur:blur(var(--glass-blur,28px)) saturate(1.8) brightness(1.1); --view-blur:var(--blur); --shell-pad:0 10px 10px; --shell-gap:10px; --top-m:10px 10px 8px; --top-r:18px; --top-bb:1px solid var(--line); --fw:450;
-  --chrome:linear-gradient(135deg,rgba(255,255,255,.2),rgba(255,255,255,.03) 38%,rgba(255,255,255,0) 60%,rgba(255,255,255,.09)),rgba(255,255,255,var(--glass-tint,.08)); --chrome-bd:1px solid var(--line); --chrome-sh:inset 0 1px 0 rgba(255,255,255,.55), inset 1px 0 0 rgba(255,255,255,.22), inset 0 -1px 0 rgba(0,0,0,.22), inset 0 0 28px rgba(255,255,255,.05), 0 14px 40px rgba(0,0,0,.35);
-  --rail-bg:linear-gradient(135deg,rgba(255,255,255,.2),rgba(255,255,255,.03) 38%,rgba(255,255,255,0) 60%,rgba(255,255,255,.09)),rgba(255,255,255,var(--glass-tint,.08)); --rail-bd:1px solid var(--line); --rail-br:1px solid var(--line); --rail-r:18px; --rail-sh:inset 0 1px 0 rgba(255,255,255,.45), inset 1px 0 0 rgba(255,255,255,.18), inset 0 -1px 0 rgba(0,0,0,.2), 0 14px 40px rgba(0,0,0,.3);
-  --view-bg:linear-gradient(135deg,rgba(255,255,255,.2),rgba(255,255,255,.03) 38%,rgba(255,255,255,0) 60%,rgba(255,255,255,.09)),rgba(255,255,255,calc(var(--glass-tint,.08) * .6)); --view-bd:1px solid var(--line); --view-r:18px; --view-sh:inset 0 1px 0 rgba(255,255,255,.4), inset 1px 0 0 rgba(255,255,255,.16), inset 0 -1px 0 rgba(0,0,0,.2), 0 14px 40px rgba(0,0,0,.3); --sticky-bg:rgba(16,18,32,.55); --desc-fade:rgba(20,22,38,.9);
-  --nav-on:rgba(255,255,255,.14); --nav-on-sh:inset 0 1px 0 rgba(255,255,255,.3); --nav-bar:none;
-  --ctl:rgba(255,255,255,.1); --ctl-h:rgba(255,255,255,.2); --ctl-bd:rgba(255,255,255,.18); --ctl-sh:inset 0 1px 0 rgba(255,255,255,.4), inset 0 -1px 0 rgba(0,0,0,.15);
-  --pri:linear-gradient(rgba(255,255,255,.96),rgba(206,222,255,.86)); --pri-text:#0a0f1f; --pri-sh:inset 0 1px 0 #fff, 0 6px 18px rgba(120,160,255,.35);
-  --on-bg:rgba(255,255,255,.9); --on-text:#0a0f1f; --in-bg:rgba(255,255,255,.08); --in-sh:inset 0 1px 0 rgba(255,255,255,.14);
-  --pop:rgba(28,30,48,.72); --pop-bd:1px solid rgba(255,255,255,.2); --pop-sh:0 18px 50px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.22); --sel-bg:rgba(255,255,255,.16); --sel-text:#fff;
-  --thumb-bd:1px solid rgba(255,255,255,.14); --thumb-sh:0 6px 20px rgba(0,0,0,.35); --thumb-sh-h:0 14px 34px rgba(0,0,0,.5); --panel-sh:inset 0 1px 0 rgba(255,255,255,.35), inset 0 -1px 0 rgba(0,0,0,.18); --panel-blur:var(--blur);
-  --play-bg:rgba(255,255,255,.22); --play-fg:#fff; --play-bd:1px solid rgba(255,255,255,.5); --play-sh:inset 0 1px 0 rgba(255,255,255,.5), 0 8px 24px rgba(0,0,0,.4);
-  --logo-bg:linear-gradient(135deg,#9ec5ff,#c78bff); --sw-on-bg:rgba(158,197,255,.3); --toast-bg:rgba(255,255,255,.9); --toast-text:#0a0f1f; }
-/* ----- Glass, the real-glass layers -----
-   1. drifting colour orbs sit behind the panels, so the blur has something to bend (a blurred flat gradient looks like plastic)
-   2. grain keeps big blurs from banding
-   3. with "See-through window" on, the OS supplies the glass (acrylic / vibrancy / compositor transparency) and the page goes translucent */
-.orb { display: none; position: absolute; border-radius: 50%; filter: blur(52px); opacity: .6; will-change: transform; }
-[data-theme="glass"] .orb { display: block; }
-.o1 { width: 46vw; height: 46vw; left: -8vw; top: -12vh; background: radial-gradient(circle at 35% 35%, #5b7bff, #3b5bdb 55%, transparent 72%); animation: drift1 26s ease-in-out infinite alternate; }
-.o2 { width: 38vw; height: 38vw; right: -6vw; top: 18vh; background: radial-gradient(circle at 40% 40%, #e24dff, #b026d3 55%, transparent 72%); animation: drift2 31s ease-in-out infinite alternate; }
-.o3 { width: 42vw; height: 42vw; left: 28vw; bottom: -18vh; background: radial-gradient(circle at 50% 40%, #2fe0d0, #0ea5a5 55%, transparent 72%); animation: drift3 36s ease-in-out infinite alternate; }
-@keyframes drift1 { to { transform: translate(24vw, 30vh) scale(1.15); } } @keyframes drift2 { to { transform: translate(-28vw, 22vh) scale(.9); } } @keyframes drift3 { to { transform: translate(-22vw, -26vh) scale(1.2); } }
-.no-motion .orb { animation: none; }
-[data-theme="glass"] #bg::after { content: ""; position: absolute; inset: 0; opacity: .07; mix-blend-mode: overlay; background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='160' height='160' filter='url(%23n)'/></svg>"); }
-[data-theme="glass"] .thumb { backdrop-filter: blur(6px); box-shadow: var(--thumb-sh), inset 0 1px 0 rgba(255,255,255,.35); }
-[data-theme="glass"] .card:hover .thumb { transform: translateY(-3px) scale(1.012); }
-.native-glass[data-theme="glass"] { --bg:rgba(10,12,24,calc(.22 + var(--glass-tint,.08))); --bg-image:none; --pop:rgba(20,22,38,.62); --sticky-bg:rgba(14,16,30,.4); --desc-fade:rgba(14,16,30,.75); }
-.native-glass[data-theme="glass"] .orb { display: none; }
-.native-glass[data-theme="glass"] body { background: transparent; }
-
 /* ===== Frutiger Aero: glossy sky, bubbles, grass, Win7-style gradients ===== */
 [data-theme="aero"] { --bg:#8fd0ff; --font:"Noto Sans", "Segoe UI", system-ui, sans-serif; --fs:13.5px; --fw:450; --title-fw:600; --sw:1.9;
   --bg-image:
@@ -130,3 +97,50 @@
   --skel-bg:repeating-conic-gradient(#fff 0 25%, #000 0 50%) 0 0/4px 4px; --sb-thumb:#fff; --sw-knob:#fff; --sw-on-bg:transparent; --toast-bd:1px solid #fff; --toast-bg:#000; --toast-text:#fff; }
 [data-theme="bit"] .bar2 { background: #000; border: 1px solid #fff; } [data-theme="bit"] .tag { background: #fff; color: #000; } [data-theme="bit"] .avatar { background: #000; }
 [data-theme="bit"] .link { text-decoration: underline; } [data-theme="bit"] h1, [data-theme="bit"] h2, [data-theme="bit"] .rhead { text-transform: uppercase; letter-spacing: .04em; }
+
+/* ===== OLED Black: true #000 so pixels switch off, high-contrast, soft cards ===== */
+[data-theme="oled"] { --bg:#000; --surface:#0b0b0c; --surface-2:#141416; --surface-3:#1f1f23; --line:#1c1c20; --text:#f2f2f4; --muted:#9a9aa3; --faint:#62626b; --accent:#3ea6ff; --on-accent:#000; --link:#6cbcff;
+  --r:14px; --r-sm:10px; --r-pill:999px; --chrome:#000; --top-bb:1px solid #131316; --rail-bg:#000; --rail-br:1px solid #131316; --pop:#0e0e10; --pop-bd:1px solid #232328; --pop-sh:0 14px 40px rgba(0,0,0,.9);
+  --ctl:#121214; --ctl-bd:#1f1f23; --ctl-h:#1c1c20; --pri:var(--accent); --pri-text:#000; --on-bg:var(--accent); --on-text:#000; --in-bg:#0b0b0c; --desc-fade:#000; --sel-bg:#1c1c20; --sel-text:#fff; --nav-on:#141416;
+  --toast-bg:#f2f2f4; --toast-text:#000; --sw-on-bg:rgba(62,166,255,.35); --sb-thumb:#26262b; --sb-r:6px; --sb-bd:2px solid #000; }
+
+/* ===== Classic Dark: the familiar dark video-site look ===== */
+[data-theme="ytdark"] { --bg:#0f0f0f; --surface:#181818; --surface-2:#222; --surface-3:#303030; --line:#2c2c2c; --text:#f1f1f1; --muted:#aaa; --faint:#717171; --accent:#ff2a2a; --on-accent:#fff; --link:#3ea6ff;
+  --r:12px; --r-sm:8px; --r-pill:999px; --chrome:#0f0f0f; --top-bb:0; --rail-bg:#0f0f0f; --rail-br:0; --pop:#282828; --pop-sh:0 10px 34px rgba(0,0,0,.6); --ctl:#272727; --ctl-h:#3f3f3f; --pri:#f1f1f1; --pri-text:#0f0f0f;
+  --on-bg:#f1f1f1; --on-text:#0f0f0f; --in-bg:#121212; --in-bd:#303030; --desc-fade:#0f0f0f; --sel-bg:#3f3f3f; --sel-text:#fff; --nav-on:#272727; --nav-bar:none; --toast-bg:#f1f1f1; --toast-text:#0f0f0f; --sw-on-bg:rgba(62,166,255,.4); --sb-thumb:#444; --sb-r:6px; --logo-r:5px; --prog:#ff2a2a; }
+[data-theme="ytdark"] .tag.dur { background: rgba(0,0,0,.8); border-radius: 4px; }
+
+/* ===== Material 3: tonal surfaces, big radii, pill controls, state layers ===== */
+[data-theme="material"] { --bg:#141218; --surface:#1d1b20; --surface-2:#2b2930; --surface-3:#36343b; --line:#49454f; --text:#e6e0e9; --muted:#cac4d0; --faint:#938f99; --accent:#d0bcff; --on-accent:#381e72; --link:#d0bcff;
+  --font:Inter, system-ui, sans-serif; --fw:450; --title-fw:600; --r:20px; --r-sm:14px; --r-pill:999px; --chrome:#141218; --top-bb:0; --top-m:6px 12px; --top-r:28px; --rail-bg:#141218; --rail-br:0; --rail-r:0;
+  --view-bg:#1d1b20; --view-r:28px; --shell-pad:0 12px 12px 0; --shell-gap:0; --sticky-bg:#1d1b20; --desc-fade:#1d1b20; --pop:#2b2930; --pop-bd:0; --pop-sh:0 8px 28px rgba(0,0,0,.5);
+  --nav-on:#4a4458; --nav-on-text:#e8def8; --nav-bar:none; --ctl:#2b2930; --ctl-h:#36343b; --ctl-bd:transparent; --pri:#d0bcff; --pri-text:#381e72; --on-bg:#4a4458; --on-text:#e8def8; --in-bg:#2b2930; --in-bd:transparent;
+  --sel-bg:#4a4458; --sel-text:#e8def8; --thumb-sh:0 1px 3px rgba(0,0,0,.4); --thumb-sh-h:0 6px 18px rgba(0,0,0,.5); --toast-bg:#e6e0e9; --toast-text:#322f35; --sw-on-bg:#d0bcff; --sw-knob-on:#381e72; --sb-thumb:#49454f; --sb-r:8px; --sb-bd:2px solid transparent; --logo-r:8px; --hov-lift:-2px; }
+[data-theme="material"] .nav { border-radius: 16px; } [data-theme="material"] .chip { height: 34px; }
+
+/* ===== Monochrome: quiet, paper-white, grayscale artwork that wakes up on hover ===== */
+[data-theme="mono"] { --bg:#f6f6f5; --surface:#fff; --surface-2:#eeeeec; --surface-3:#e1e1de; --line:#dcdcd8; --text:#161616; --muted:#6b6b66; --faint:#a1a19b; --accent:#161616; --on-accent:#fff; --link:#161616;
+  --font:system-ui, -apple-system, "Segoe UI", sans-serif; --fw:450; --r:2px; --r-sm:2px; --r-pill:2px; --hov-lift:0px; --chrome:#f6f6f5; --top-bb:1px solid #dcdcd8; --rail-bg:#f6f6f5; --rail-br:1px solid #dcdcd8; --pop:#fff; --pop-bd:1px solid #161616; --pop-sh:4px 4px 0 rgba(0,0,0,.12);
+  --ctl:#fff; --ctl-bd:#c9c9c4; --ctl-h:#161616; --ctl-text-h:#fff; --ghost-h:#e8e8e5; --pri:#161616; --pri-text:#fff; --on-bg:#161616; --on-text:#fff; --in-bg:#fff; --in-bd:#c9c9c4; --desc-fade:#fff; --sel-bg:#161616; --sel-text:#fff;
+  --nav-on:#161616; --nav-on-text:#fff; --nav-bar:none; --toast-bg:#161616; --toast-text:#fff; --sw-on-bg:#161616; --sw-knob-on:#fff; --sb-thumb:#c9c9c4; --logo-r:2px; }
+[data-theme="mono"] .thumb img { filter: grayscale(1) contrast(1.05); transition: opacity .3s, transform .5s var(--ease), filter .4s; } [data-theme="mono"] .card:hover .thumb img, [data-theme="mono"] .mini:hover .thumb img { filter: none; }
+[data-theme="mono"] .brand .logo { filter: grayscale(1); }
+
+/* ===== Media Center: glossy blue, glowing highlights, big friendly type (couch-UI nostalgia) ===== */
+[data-theme="retro"] { --bg:#061630; --font:"Noto Sans", "Segoe UI", system-ui, sans-serif; --fs:14px; --fw:450; --title-fw:600; --sw:1.9;
+  --bg-image: radial-gradient(60vw 45vh at 50% -8%, rgba(70,160,255,.55), transparent 70%), radial-gradient(90vw 40vh at 50% 118%, rgba(0,200,160,.3), transparent 70%), linear-gradient(180deg,#123a7a,#071a3a 55%,#030c1e);
+  --surface:rgba(255,255,255,.08); --surface-2:rgba(255,255,255,.13); --surface-3:rgba(255,255,255,.2); --line:rgba(160,210,255,.28); --text:#f2f8ff; --muted:#a9c6e8; --faint:#7394bd; --accent:#5be3ff; --on-accent:#00222e; --link:#8fe9ff;
+  --r:10px; --r-sm:6px; --r-pill:999px; --blur:blur(10px) saturate(1.3);
+  --chrome:linear-gradient(180deg,rgba(130,190,255,.5),rgba(30,90,190,.55) 50%,rgba(10,50,130,.65) 51%,rgba(30,90,180,.6)); --chrome-bd:1px solid rgba(170,215,255,.55); --chrome-sh:inset 0 1px 0 rgba(255,255,255,.55), 0 4px 18px rgba(0,20,80,.5); --top-m:8px; --top-r:12px; --shell-pad:0 8px 8px; --shell-gap:8px;
+  --rail-bg:linear-gradient(180deg,rgba(60,130,220,.35),rgba(10,40,100,.45)); --rail-bd:1px solid rgba(170,215,255,.4); --rail-br:1px solid rgba(170,215,255,.4); --rail-r:12px; --rail-sh:inset 0 1px 0 rgba(255,255,255,.3);
+  --view-bg:rgba(8,24,60,.55); --view-bd:1px solid rgba(170,215,255,.35); --view-r:12px; --view-sh:inset 0 1px 0 rgba(255,255,255,.2), 0 8px 30px rgba(0,10,50,.5); --view-blur:var(--blur); --sticky-bg:rgba(8,24,60,.85); --desc-fade:#0a2150;
+  --nav-on:linear-gradient(180deg,rgba(140,220,255,.55),rgba(40,130,220,.55)); --nav-on-text:#fff; --nav-on-sh:inset 0 1px 0 rgba(255,255,255,.6), 0 0 14px rgba(91,227,255,.55); --nav-bar:none;
+  --ctl:linear-gradient(180deg,rgba(255,255,255,.28),rgba(255,255,255,.08) 50%,rgba(255,255,255,.04) 51%,rgba(255,255,255,.14)); --ctl-bd:rgba(170,215,255,.5); --ctl-sh:inset 0 1px 0 rgba(255,255,255,.5);
+  --ctl-h:linear-gradient(180deg,rgba(150,230,255,.5),rgba(60,160,230,.3) 50%,rgba(30,120,200,.3) 51%,rgba(90,200,255,.4)); --ctl-sh-h:inset 0 1px 0 rgba(255,255,255,.6), 0 0 12px rgba(91,227,255,.5);
+  --pri:linear-gradient(180deg,#9af0ff 0,#35c3ee 50%,#0b93c9 51%,#37b8e8); --pri-text:#00212d; --pri-bd:#0a6f99; --pri-sh:inset 0 1px 0 rgba(255,255,255,.7), 0 0 16px rgba(91,227,255,.45);
+  --on-bg:linear-gradient(180deg,#8eeaff,#2aa6dc); --on-text:#00212d; --in-bg:rgba(0,20,60,.55); --in-bd:rgba(170,215,255,.45); --in-sh-focus:0 0 0 3px rgba(91,227,255,.4);
+  --pop:rgba(10,34,84,.95); --pop-bd:1px solid rgba(170,215,255,.5); --pop-sh:0 14px 40px rgba(0,10,50,.65), inset 0 1px 0 rgba(255,255,255,.3); --sel-bg:linear-gradient(180deg,rgba(140,220,255,.55),rgba(40,130,220,.55)); --sel-text:#fff;
+  --thumb-bd:1px solid rgba(170,215,255,.55); --thumb-sh:0 4px 16px rgba(0,10,50,.55); --thumb-sh-h:0 0 0 2px #5be3ff, 0 10px 28px rgba(91,227,255,.35); --panel-sh:inset 0 1px 0 rgba(255,255,255,.25); --panel-blur:var(--blur);
+  --play-bg:radial-gradient(circle at 35% 25%,#d6f8ff,#35c3ee 55%,#0b6fa0); --play-fg:#00212d; --play-bd:2px solid rgba(255,255,255,.8); --play-sh:0 0 20px rgba(91,227,255,.6);
+  --logo-bg:linear-gradient(180deg,#9af0ff,#0b93c9); --toast-bg:rgba(10,34,84,.95); --toast-text:#fff; --toast-bd:1px solid rgba(170,215,255,.5); --sw-on-bg:linear-gradient(#8eeaff,#2aa6dc); --sb-thumb:rgba(170,215,255,.4); --sb-r:8px; --sb-bd:2px solid transparent; --prog:#5be3ff; }
+[data-theme="retro"] .brand { text-shadow: 0 0 12px rgba(91,227,255,.8); } [data-theme="retro"] .title { text-shadow: 0 1px 6px rgba(0,10,50,.7); }
