@@ -5,6 +5,9 @@ import { audio } from '../core/audio.js';
 import { sources } from '../sources/manager.js';
 import { SOURCES, isMusic } from '../core/models.js';
 import { avatar, watchPath, creatorPath, contextMenu, videoMenu, skeletons } from './components.js';
+import { rankMusic } from '../rec/musicrank.js';
+import { terminal } from './terminal.js';
+import { friendly } from '../core/net.js';
 import { addToPlaylistDialog } from './playlists.js';
 
 /** An Internet Archive audio item is a release: it has a real tracklist, so it opens as an album. Nothing else is called an album. */
@@ -22,28 +25,43 @@ function trackRow(v, list, i) {
     h('button.iconbtn', { title: 'Add to playlist', 'aria-label': 'Add to playlist', onclick: () => addToPlaylistDialog(v) }, icon('listplus', 17)));
 }
 
+const newSeed = () => Math.floor(Math.random() * 2 ** 31);
 export function music(root) {
-  let tab = 'discover', q = '', page = 0, items = [], busy = false, alive = true, done = false, seq = 0;
-  const body = h('div'), tabs = h('div.chips'), more = h('div', { style: { textAlign: 'center', margin: '18px' } });
+  let tab = 'discover', q = '', page = 0, items = [], busy = false, alive = true, done = false, seq = 0, sort = state.settings.musicSort || 'popular', term = null, seed = newSeed(), base = Math.floor(Math.random() * 3);
+  const body = h('div'), tabs = h('div.chips'), sorts = h('div.chips'), more = h('div', { style: { textAlign: 'center', margin: '18px' } });
   const input = h('input.input', { placeholder: 'Search music: artist, track, album…', 'aria-label': 'Search music', style: { flex: 1, maxWidth: '520px' }, onkeydown: e => { if (e.key === 'Enter') { q = input.value.trim(); load(true); } } });
   const TABS = [['discover', 'Tracks'], ['albums', 'Albums & releases'], ['artists', 'Artists']];
+  const SORTS = [['popular', 'Most listened'], ['trending', 'Trending'], ['new', 'Newest']];
+  const stopTerm = () => { term?.stop(); term = null; };
 
+  /** Every provider is asked for its most-popular-first list; results are ranked by popularity within each provider, then interleaved. */
   async function load(reset) {
-    if (busy) return; busy = true; const my = ++seq;
-    if (reset) { page = 0; items = []; done = false; draw(); } else page++;
+    if (busy && !reset) return; busy = true; const my = ++seq;
+    if (reset) { page = 0; items = []; done = false; } else page++;
+    if (reset) seed = newSeed(); if (reset && !q) base = Math.floor(Math.random() * 3);
+    const start = reset ? 0 : items.length, t0 = Date.now();
+    stopTerm(); term = terminal({ scopes: ['music'], since: t0 - 200, title: q ? `WishTube · searching music for “${q.slice(0, 30)}”` : 'WishTube · loading music', className: 'big', max: 12, headline: () => 'Loading' });
+    draw();
     try {
-      const r = dedupe(await sources.music(q, page));
+      await sources.music(q, page + (q ? 0 : base), (_id, l) => {
+        if (!alive || my !== seq) return;
+        const had = new Set(items.map(x => x.id)), fresh = dedupe(l).filter(x => !had.has(x.id));
+        items = [...items.slice(0, start), ...rankMusic([...items.slice(start), ...fresh], { sort, query: q, seed })]; draw();
+      }, { sort });
       if (!alive || my !== seq) return;
-      const had = new Set(items.map(x => x.id)); const fresh = r.filter(x => !had.has(x.id)); items = [...items, ...fresh]; if (!fresh.length) done = true;
-    } catch (e) { toast('Music failed to load: ' + e.message); }
-    busy = false; draw();
+      if (items.length === start) done = true;
+    } catch (e) { toast('Music failed to load: ' + friendly(e)); }
+    if (my !== seq) return;
+    busy = false; stopTerm(); draw();
   }
   function draw() {
     clear(tabs).append(...TABS.map(([k, l]) => h('button.chip', { class: k === tab ? 'on' : '', onclick: () => { tab = k; draw(); } }, l)));
+    clear(sorts).append(...SORTS.map(([k, l]) => h('button.chip', { class: k === sort ? 'on' : '', title: k === 'popular' ? 'Most viewed / downloaded first' : k === 'trending' ? 'What people are playing right now' : 'Latest uploads', onclick: () => { if (sort === k) return; sort = k; state.settings.musicSort = k; state.saveSettings(); load(true); } }, l)),
+      h('button.chip', { title: 'Pick a fresh mix', onclick: () => load(true) }, icon('refresh', 14), ' Shuffle'));
     clear(body); clear(more);
     const tracks = items.filter(v => !isAlbum(v)), albums = items.filter(isAlbum);
-    if (busy && !items.length) return body.append(skeletons(8));
-    if (!items.length) return body.append(h('div.empty', h('h2', q ? 'No music found' : 'No music loaded'), h('p', q ? 'Try different words. Music comes from PeerTube’s Music category, Odysee music tags and Internet Archive audio, and only from sources you have switched on.' : 'Check your connection or the sources in Settings.'), h('button.btn.pri', { onclick: () => load(true) }, 'Retry')));
+    if (busy && !items.length) return body.append(h('div.loadbox', term ? term.el : null));
+    if (!items.length) return body.append(h('div.empty', h('h2', q ? 'No music found' : 'No music loaded'), h('p', q ? 'Try different words. Music comes from PeerTube’s Music category, Odysee music tags and Internet Archive audio, and only from sources you have switched on.' : 'Check your connection or the sources in Settings.'), h('button.btn.pri', { onclick: () => load(true) }, 'Retry')), h('div.loadbox', staticLog({ scopes: ['music'], title: 'What happened' })));
     if (tab === 'discover') {
       body.append(h('div.row', { style: { marginBottom: '10px', gap: '8px' } }, h('button.btn.pri', { onclick: () => audio.playList(tracks) , disabled: !tracks.length }, icon('play', 15), 'Play all'),
         h('button.btn', { disabled: !tracks.length, onclick: () => { audio.q.setShuffle(true); audio.playList(tracks, Math.floor(Math.random() * tracks.length)); } }, icon('shuffle', 15), 'Shuffle'), h('button.btn', { disabled: !tracks.length, onclick: () => { audio.addMany(tracks); toast('Added ' + tracks.length + ' to queue'); } }, icon('queue', 15), 'Queue all')));
@@ -58,12 +76,12 @@ export function music(root) {
       body.append(h('p.sub', { style: { marginBottom: '14px' } }, 'Uploaders and channels in these results. A provider doesn’t say whether a channel is the artist, so this is shown as uploaded, not guessed.'),
         h('div.row.wrap', { style: { gap: '22px' } }, ...arts.map(({ v, n }) => h('a', { href: '#' + creatorPath(v), style: { textAlign: 'center', width: '110px' } }, avatar(v.creator, null, 72), h('div.title', { style: { marginTop: '8px', fontSize: '.92em', WebkitLineClamp: 2 } }, v.creator), h('div.sub', n + ' in results')))));
     }
-    if (!done) more.append(h('button.btn', { disabled: busy, class: busy ? 'loading' : '', onclick: () => load(false) }, busy ? 'Loading' : 'Load more'));
+    if (!done) more.append(h('button.btn', { disabled: busy, onclick: () => load(false) }, busy ? 'Loading more…' : 'Load more'));
   }
-  root.append(h('div.page', h('div.row.wrap', { style: { gap: '14px', marginBottom: '8px' } }, h('h1', icon('music', 26), ' Music'), h('div.grow'), input), h('div.sticky.flow', tabs), body, more));
+  root.append(h('div.page', h('div.row.wrap', { style: { gap: '14px', marginBottom: '8px' } }, h('h1', icon('music', 26), ' Music'), h('div.grow'), input), h('div.sticky.flow', h('div.row', tabs, h('div.grow'), sorts)), body, more));
   load(true);
   const off = audio.on('change', () => { root.querySelectorAll('.trow').forEach(r => r.classList.toggle('now', r.dataset.id === audio.current?.id)); });
-  return () => { alive = false; off(); };
+  return () => { alive = false; stopTerm(); off(); };
 }
 
 export function album(root, { id }) {

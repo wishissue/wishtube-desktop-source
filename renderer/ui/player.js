@@ -1,5 +1,8 @@
 import { h, fmtDur, toast } from './dom.js';
 import { icon } from './icons.js';
+import { trace } from '../core/trace.js';
+import { net, friendly } from '../core/net.js';
+import { terminal } from './terminal.js';
 
 const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
 const mod = (x, a, b) => Math.min(b, Math.max(a, x));
@@ -16,41 +19,74 @@ export class Player {
     this.watched = 0; this.maxPos = 0; this.last = null; this.urlIdx = 0; this.hls = null; this.startAt = startAt; this.menu = null; this.prefs = prefs;
     this.el = h('div.player', { tabIndex: 0 });
     this.media = h('video', { playsInline: true, crossOrigin: 'anonymous', preload: 'auto' });
-    this.spin = h('div.buffering', h('div.spin'));
+    this.scope = opts.scope || 'play:' + video.id; this.T = trace.scoped(this.scope); this.t0 = opts.since || Date.now();
+    this.pload = h('div.pload'); this.term = null; this.pinned = false; this.playedOnce = false; this.lazyTried = false;
     this.err = null;
     this.buildControls();
-    this.el.append(this.media, h('div.topfade', video.title), this.spin, this.ctrls);
+    this.el.append(this.media, h('div.topfade', video.title), this.pload, this.ctrls);
     this.bind();
     this.load(0);
   }
 
+  /* ---------- live log (replaces the spinner) ---------- */
+  /** Show exactly what is happening for this video. Hidden again as soon as it plays, unless pinned from the controls. */
+  showLoad(title = 'WishTube · loading this video') {
+    if (this.term) return;
+    this.term = terminal({ scopes: [this.scope], since: this.t0, title, max: 10, className: 'over', headline: () => this.playedOnce ? 'Buffering' : 'Starting playback' });
+    this.pload.replaceChildren(this.term.el);
+  }
+  hideLoad() { this.term?.stop(); this.term = null; this.pload.replaceChildren(); }
+
   /* ---------- loading with fallback ---------- */
   load(i) {
-    const url = this.stream.urls[i]; this.urlIdx = i;
-    if (!url) return this.fail();
-    this.destroyHls(); this.err?.remove();
-    const isHls = /\.m3u8(\?|$)/.test(url);
-    const ok = () => { if (this.startAt > 5 && !this.started) { this.media.currentTime = this.startAt; } if (!this.started) { this.media.playbackRate = this.o.speed || 1; if (this.o.captions) this.media.addEventListener('loadedmetadata', () => { const t = this.media.textTracks[0]; if (t) t.mode = 'showing'; }, { once: true }); } this.started = true; };
+    const url = this.stream.urls[i]; this.urlIdx = i; clearTimeout(this.wd);
+    if (!url) return this.exhausted();
+    this.destroyHls(); this.err?.remove(); this.err = null; this.tTry = Date.now();
+    const isHls = /\.m3u8(\?|$)/.test(url), n = this.stream.urls.length, T = this.T;
+    T.info(`Trying stream ${i + 1} of ${n}: ${net.host(url)}${isHls ? ' (HLS adaptive)' : ''}`);
+    if (!this.playedOnce) this.showLoad();
+    const ok = () => { if (this.startAt > 5 && !this.started) { this.media.currentTime = this.startAt; T.info(`Resuming from ${fmtDur(this.startAt)}`); } if (!this.started) { this.media.playbackRate = this.o.speed || 1; if (this.o.captions) this.media.addEventListener('loadedmetadata', () => { const t = this.media.textTracks[0]; if (t) t.mode = 'showing'; }, { once: true }); } this.started = true; };
     if (isHls && window.Hls?.isSupported()) {
-      const hls = this.hls = new window.Hls({ maxBufferLength: 60, maxMaxBufferLength: 120, capLevelToPlayerSize: false, startLevel: -1, enableWorker: true, backBufferLength: 90 });
+      const E = window.Hls.Events, hls = this.hls = new window.Hls({ maxBufferLength: 60, maxMaxBufferLength: 120, capLevelToPlayerSize: false, startLevel: -1, enableWorker: true, backBufferLength: 90 });
       hls.loadSource(url); hls.attachMedia(this.media);
-      hls.on(window.Hls.Events.MANIFEST_PARSED, () => { ok(); this.media.play().catch(() => {}); this.levels = hls.levels; });
-      hls.on(window.Hls.Events.ERROR, (_e, d) => {
-        if (!d.fatal) return;
-        if (d.type === window.Hls.ErrorTypes.NETWORK_ERROR && (this.retry = (this.retry || 0) + 1) < 3) hls.startLoad();
-        else if (d.type === window.Hls.ErrorTypes.MEDIA_ERROR && (this.mretry = (this.mretry || 0) + 1) < 3) hls.recoverMediaError();
-        else this.load(i + 1);
+      hls.on(E.MANIFEST_LOADING, () => T.info('Downloading the playlist…'));
+      hls.on(E.MANIFEST_PARSED, (_e, d) => { ok(); T.ok(`Playlist ready: ${d.levels.length} quality level${d.levels.length === 1 ? '' : 's'} (${[...new Set(d.levels.map(l => l.height).filter(Boolean))].sort((a, b) => b - a).join('p, ')}p)`); this.media.play().catch(() => {}); this.levels = hls.levels; });
+      hls.once(E.FRAG_LOADED, (_e, d) => T.ok(`First segment received (${Math.round((d.frag.stats.loaded || 0) / 1024)} KB in ${Math.round(d.frag.stats.loading.end - d.frag.stats.loading.start)} ms)`));
+      hls.on(E.LEVEL_SWITCHED, (_e, d) => { const l = hls.levels[d.level]; if (l?.height) T.info(`Quality: ${l.height}p${hls.autoLevelEnabled ? ' (automatic)' : ''}`); });
+      hls.on(E.ERROR, (_e, d) => {
+        if (!d.fatal) { T.warn(`Hiccup: ${d.details}${d.response?.code ? ' (HTTP ' + d.response.code + ')' : ''}`); return; }
+        if (d.type === window.Hls.ErrorTypes.NETWORK_ERROR && (this.retry = (this.retry || 0) + 1) < 3) { T.warn(`Network error (${d.details}) — retry ${this.retry} of 2`); hls.startLoad(); }
+        else if (d.type === window.Hls.ErrorTypes.MEDIA_ERROR && (this.mretry = (this.mretry || 0) + 1) < 3) { T.warn(`Decoder error (${d.details}) — recovering, attempt ${this.mretry} of 2`); hls.recoverMediaError(); }
+        else this.next(`HLS failed: ${d.details}`);
       });
     } else {
       this.media.src = url;
       this.media.addEventListener('loadedmetadata', ok, { once: true });
       this.media.play().catch(() => {});
     }
+    // Watchdog: a mirror that sends nothing is abandoned instead of waited for.
+    this.wd = setTimeout(() => this.stalled(i), this.playedOnce ? 12000 : 9000);
+  }
+  async stalled(i) {
+    if (this.playedOnce || i !== this.urlIdx || this.failedAll) return;
+    const rest = this.stream.urls.slice(i + 1);
+    this.T.warn(`${net.host(this.stream.urls[i])} produced no video in ${Math.round((Date.now() - this.tTry) / 1000)} s`);
+    if (rest.length > 1) { const best = await net.race(rest, { scope: this.scope, timeout: 4000 }); if (i !== this.urlIdx || this.playedOnce) return; this.stream.urls = [...this.stream.urls.slice(0, i + 1), best, ...rest.filter(u => u !== best)]; }
+    this.next('switching to the next mirror');
+  }
+  next(why) { this.T.warn(why); this.load(this.urlIdx + 1); }
+  async exhausted() {
+    if (this.stream.lazy && !this.lazyTried) {                         // slow last-resort route, asked for only now
+      this.lazyTried = true; this.T.info('Every direct mirror failed — asking the network for another route (can take a few seconds)…');
+      try { const more = await this.stream.lazy(); if (more.length) { const at = this.stream.urls.length; this.stream.urls.push(...more); this.T.ok(`Got ${more.length} more route${more.length === 1 ? '' : 's'}`); return this.load(at); } this.T.warn('No other route available'); } catch (e) { this.T.warn('Other route failed: ' + friendly(e)); }
+    }
+    this.fail();
   }
   fail() {
-    this.spin.style.display = 'none';
-    this.err = h('div.perr', h('div', h('h2', 'This video couldn’t be played'), h('p.sub', 'Every available stream failed. The source may be down, private, or geo-restricted. If it plays on the website, try Pretend as Browser.')),
-      h('div.row', { style: { justifyContent: 'center', flexWrap: 'wrap' } }, h('button.btn.pri', { onclick: () => { this.err.remove(); this.spin.style.display = ''; this.load(0); } }, 'Try Again'),
+    clearTimeout(this.wd); this.failedAll = true; this.T.err('Every available stream failed');
+    this.term?.stop(); this.term = null; this.pload.replaceChildren();
+    this.err = h('div.perr', h('div', h('h2', 'This video couldn’t be played'), h('p.sub', 'The source may be down, private, or not available in your country.')),
+      h('div.row', { style: { justifyContent: 'center', flexWrap: 'wrap' } }, h('button.btn.pri', { onclick: () => { this.err.remove(); this.err = null; this.failedAll = false; this.lazyTried = false; this.t0 = Date.now(); this.T.info('Trying again from the first stream'); this.load(0); } }, 'Try Again'),
         h('button.btn', { onclick: () => window.wt.openExternal(this.v.url) }, icon('ext', 16), 'Open Original'),
         this.onBrowser ? h('button.btn', { onclick: () => this.onBrowser() }, icon('compass', 16), 'Pretend as Browser') : null));
     this.el.append(this.err);
@@ -113,11 +149,15 @@ export class Player {
     m.volume = this.prefs.volume ?? 1;
     m.addEventListener('play', () => { this.bPlay.replaceChildren(icon('pause', 20)); });
     m.addEventListener('pause', () => { this.bPlay.replaceChildren(icon('play', 20)); this.last = null; });
-    m.addEventListener('waiting', () => { this.spin.style.display = ''; });
-    for (const e of ['playing', 'canplay']) m.addEventListener(e, () => { this.spin.style.display = 'none'; });
+    let waitT = null;
+    m.addEventListener('loadedmetadata', () => { this.T.ok(`Stream opened: ${m.videoWidth ? m.videoWidth + '×' + m.videoHeight + ', ' : ''}${fmtDur(m.duration) || 'live'}`); });
+    m.addEventListener('waiting', () => { if (!this.playedOnce) return; clearTimeout(waitT); waitT = setTimeout(() => { if (m.readyState < 3 && !m.paused) { this.T.warn(`Buffering at ${fmtDur(m.currentTime) || '0:00'} — waiting for data from ${net.host(this.stream.urls[this.urlIdx] || '')}`); this.showLoad('WishTube · buffering'); } }, 900); });
+    m.addEventListener('stalled', () => { if (!this.playedOnce) this.T.warn('The server stopped sending data (stalled)'); });
+    m.addEventListener('playing', () => { clearTimeout(waitT); clearTimeout(this.wd); if (!this.playedOnce) { this.playedOnce = true; this.T.ok(`Playing — started in ${((Date.now() - this.t0) / 1000).toFixed(1)} s`); } this.hideLoad(); });
+    m.addEventListener('canplay', () => { clearTimeout(waitT); if (!m.paused) this.hideLoad(); });
     m.addEventListener('volumechange', () => { this.bMute.replaceChildren(icon(m.muted || m.volume === 0 ? 'mute' : 'vol', 20)); });
     m.addEventListener('durationchange', () => this.renderTicks());
-    m.addEventListener('error', () => this.load(this.urlIdx + 1));
+    m.addEventListener('error', () => { const c = m.error; this.next(`${net.host(this.stream.urls[this.urlIdx] || '')}: ${c ? ['', 'download aborted', 'network error', 'could not decode', 'format not supported'][c.code] || 'media error' : 'media error'}`); });
     m.addEventListener('ended', () => this.onEnded?.());
     m.addEventListener('progress', () => { const d = m.duration; if (d && m.buffered.length) this.buf.style.width = (m.buffered.end(m.buffered.length - 1) / d) * 100 + '%'; });
     m.addEventListener('timeupdate', () => {
@@ -171,6 +211,6 @@ export class Player {
     document.removeEventListener('keydown', this.keyH); document.removeEventListener('fullscreenchange', this.fsH);
     if (document.pictureInPictureElement === this.media) document.exitPictureInPicture().catch(() => {});
     if ('mediaSession' in navigator) navigator.mediaSession.metadata = null;
-    this.destroyHls(); this.media.pause(); this.media.removeAttribute('src'); this.media.load(); this.el.remove();
+    clearTimeout(this.wd); this.term?.stop(); this.destroyHls(); this.media.pause(); this.media.removeAttribute('src'); this.media.load(); this.el.remove();
   }
 }

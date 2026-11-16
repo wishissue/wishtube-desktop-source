@@ -3,6 +3,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 const inv = (c, ...a) => ipcRenderer.invoke(c, ...a);
 contextBridge.exposeInMainWorld('wt', {
   json: (url, opts) => inv('net:json', url, opts),
+  race: (urls, opts) => inv('net:race', urls, opts),
   get: (k, d) => inv('store:get', k, d),
   set: (k, v) => inv('store:set', k, v),
   dataPath: () => inv('store:path'),
@@ -15,6 +16,7 @@ contextBridge.exposeInMainWorld('wt', {
     fullscreen: on => inv('browser:fullscreen', on), close: () => inv('browser:close'), clear: () => inv('browser:clear'),
   },
   relaunch: () => inv('app:relaunch'),
+  update: { state: () => inv('update:state'), check: () => inv('update:check'), install: () => inv('update:install'), skip: v => inv('update:skip', v), auto: on => inv('update:auto', on), page: () => inv('update:page') },
   alwaysOnTop: on => inv('win:alwaysOnTop', on),
   exportFile: (n, t) => inv('file:export', n, t),
   importFile: () => inv('file:import'),

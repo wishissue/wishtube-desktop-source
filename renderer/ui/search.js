@@ -4,10 +4,11 @@ import { state } from '../core/state.js';
 import { sources } from '../sources/manager.js';
 import { SOURCES, kindOf } from '../core/models.js';
 import { dedupe } from '../rec/engine.js';
-import { card, skeletons, go, watchPath } from './components.js';
+import { card, go, watchPath } from './components.js';
+import { terminal } from './terminal.js';
 
 export async function search(root, { q }) {
-  let alive = true, sort = 'relevance', page = 0, results = [], filter = null, loading = false, type = 'all', dur = 'any';
+  let alive = true, term = null, sort = 'relevance', page = 0, results = [], filter = null, loading = false, type = 'all', dur = 'any';
   const DUR = { any: [0, 1e9], short: [1, 240], medium: [240, 1200], long: [1200, 1e9] };
   const bySrc = {}, grid = h('div.grid'), chips = h('div.chips'), status = h('div.sub'), more = h('div', { style: { textAlign: 'center', margin: '30px 0' } });
 
@@ -41,10 +42,11 @@ export async function search(root, { q }) {
       h('i.dot', { style: { background: SOURCES[id].color } }), SOURCES[id].label, bySrc[id] ? h('span.sub', { style: { marginLeft: '2px' } }, bySrc[id].length) : null)));
   }
   async function run(p) {
-    page = p; loading = true; if (!p) { Object.keys(bySrc).forEach(k => delete bySrc[k]); clear(grid).append(skeletons(8)); }
+    page = p; loading = true; const t0 = Date.now();
+    if (!p) { Object.keys(bySrc).forEach(k => delete bySrc[k]); term?.stop(); clear(grid); term = terminal({ scopes: ['search'], title: `WishTube · searching “${q.slice(0, 40)}”`, since: t0, className: 'big', headline: () => 'Searching' }); grid.append(h('div.loadbox', { style: { gridColumn: '1/-1' } }, term.el)); }
     const errs = []; const off = state.bus.on('source-error', e => errs.push(e));
-    await sources.search(q, p, sort, (id, l) => { if (!alive) return; bySrc[id] = [...(bySrc[id] || []), ...l]; if (p === 0 && grid.querySelector('.skel')) clear(grid); view(); });
-    off(); loading = false; if (!alive) return; view();
+    await sources.search(q, p, sort, (id, l) => { if (!alive) return; bySrc[id] = [...(bySrc[id] || []), ...l]; if (p === 0 && grid.querySelector('.loadbox')) { term?.stop(); term = null; clear(grid); } view(); });
+    off(); loading = false; term?.stop(); term = null; if (!alive) return; view();
     if (!results.length) clear(grid).append(h('div.empty', { style: { gridColumn: '1/-1' } }, h('h2', `No results for “${q}”`), h('p', errs.length ? `${errs.length} source(s) didn’t respond. Check your connection.` : 'Try different words or enable more sources.')));
   }
   root.append(h('div.page',
@@ -54,5 +56,5 @@ export async function search(root, { q }) {
       h('select.input', { 'aria-label': 'Sort', style: { minWidth: '140px' }, onchange: e => { sort = e.target.value; run(0); } }, ...[['relevance', 'Relevance'], ['newest', 'Newest'], ['oldest', 'Oldest'], ['popular', 'Most popular']].map(([v, l]) => h('option', { value: v }, l)))),
     h('div', { style: { marginBottom: '20px' } }, chips), grid, more));
   drawChips(); run(0);
-  return () => { alive = false; };
+  return () => { alive = false; term?.stop(); };
 }

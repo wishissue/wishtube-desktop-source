@@ -5,7 +5,7 @@ Full license texts: `renderer/assets/licenses/`.
 | What | Source | License | How it's used |
 |---|---|---|---|
 | Icons | [Lucide](https://github.com/lucide-icons/lucide) | ISC | 35 icons compiled into `ui/icons.js` by `scripts/gen-icons.mjs` |
-| Inter (variable, latin) | [rsms/inter](https://github.com/rsms/inter) | OFL 1.1 | UI font for Glass, Light, Mac OS |
+| Inter (variable, latin) | [rsms/inter](https://github.com/rsms/inter) | OFL 1.1 | UI font for Light, Mac OS |
 | Noto Sans (variable, latin) | [notofonts](https://github.com/notofonts) via fontsource | OFL 1.1 | UI font for Frutiger Aero, Windows XP |
 | JetBrains Mono (variable, latin) | [JetBrains/JetBrainsMono](https://github.com/JetBrains/JetBrainsMono) | OFL 1.1 | Terminal and 2-bit themes, timestamps |
 | Easing + keyframe tokens | [Open Props](https://github.com/argyleink/open-props) | MIT | `assets/open-props.css` (spring and ease curves) |

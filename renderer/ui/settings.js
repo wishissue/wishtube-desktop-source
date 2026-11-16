@@ -6,15 +6,17 @@ import { FEATURES } from '../rec/engine.js';
 import { pool } from '../rec/pool.js';
 import { THEMES, normalizeTheme } from '../core/themes.js';
 import { lookPanels, playerPanel } from './appearance.js';
+import { feedControls } from './feedpanel.js';
 import { WISHISSUE } from '../core/credits.js';
+import { updatesPanel } from './updates.js';
 
 const LANGS = [['en', 'English'], ['es', 'Español'], ['fr', 'Français'], ['de', 'Deutsch'], ['pt', 'Português'], ['it', 'Italiano'], ['nl', 'Nederlands'], ['ru', 'Русский'], ['ja', '日本語'], ['zh', '中文'], ['ko', '한국어'], ['ar', 'العربية'], ['hi', 'हिन्दी']];
 const WLABEL = { interest: 'Your interests', session: 'This session', creator: 'Creators you like', follow: 'Follows', quality: 'Quality', velocity: 'Trending', fresh: 'Freshness', novelty: 'Novelty', durFit: 'Length fit', srcPref: 'Source habit', small: 'Small creators', lang: 'Language', seen: 'Already seen', neg: 'Things you dislike' };
 
 const save = () => state.saveSettings();
-const toggle = (get, set) => { const el = h('button.switch', { role: 'switch', class: get() ? 'on' : '', onclick: () => { set(!get()); el.classList.toggle('on', get()); save(); } }); return el; };
+const toggle = (get, set) => { const el = h('button.switch', { type: 'button', role: 'switch', 'aria-checked': String(!!get()), class: get() ? 'on' : '', onclick: () => { set(!get()); el.classList.toggle('on', get()); el.setAttribute('aria-checked', String(!!get())); save(); } }); return el; };
 const slider = (k, min = 0, max = 1) => h('input', { type: 'range', min, max, step: 0.05, value: state.settings[k], oninput: e => { state.settings[k] = +e.target.value; }, onchange: save });
-const field = (title, desc, ctl) => h('div.field', h('div.grow', h('b', title), desc ? h('span', desc) : null), ctl);
+const field = (title, desc, ctl) => { if (ctl instanceof Element && !ctl.getAttribute('aria-label') && (ctl.matches('[role=switch],input,select') )) ctl.setAttribute('aria-label', title); return h('div.field', h('div.grow', h('b', title), desc ? h('span', desc) : null), ctl); };
 
 export function settings(root) {
   const S = state.settings, taste = h('div');
@@ -35,7 +37,7 @@ export function settings(root) {
     ...lookPanels(themePick),
 
     h('div.panel', h('h2', 'Feed'),
-      field('Explore new things', null, slider('explore')), field('Prefer fresh videos', null, slider('freshness')), field('Mix it up', null, slider('diversity')),
+      feedControls(),
       h('div.field', h('details.grow', h('summary', 'Languages'), h('div.chips', { style: { flexWrap: 'wrap', marginTop: '10px' } }, ...LANGS.map(([c, n]) => h('button.chip', { class: S.languages.includes(c) ? 'on' : '', onclick: e => { S.languages = S.languages.includes(c) ? S.languages.filter(x => x !== c) : [...S.languages, c]; e.currentTarget.classList.toggle('on'); save(); } }, n))))),
       h('div.field', h('details.grow', h('summary', 'What it learned about you'), taste, h('div.row', { style: { marginTop: '14px' } }, h('button.btn.danger.sm', { onclick: () => { if (confirm('Forget everything the ranker learned? Library and follows stay.')) { state.ranker.reset(); state.ranker.setSettings(S); state.flushProfile(); drawTaste(); toast('Reset'); } } }, icon('trash', 15), 'Reset'))))),
 
@@ -51,6 +53,8 @@ export function settings(root) {
       field('Autoplay next', null, toggle(() => S.autoplay, v => { S.autoplay = v; })),
       field('Keep playing in tray', null, toggle(() => S.closeToTray, v => { S.closeToTray = v; })),
       field('Download folder', S.downloadDir || 'Videos/WishTube', h('button.btn.sm', { onclick: async () => { const d = await window.wt.pickDir(); if (d) { S.downloadDir = d; save(); location.reload(); } } }, icon('folder', 15), 'Change'))),
+
+    updatesPanel(),
 
     h('div.panel', h('h2', 'Data'),
       h('div.row.wrap', h('button.btn', { onclick: async () => { if (await window.wt.exportFile('wishtube-profile.json', state.exportProfile())) toast('Exported'); } }, 'Export'),

@@ -1,7 +1,7 @@
 {
   "name": "wishtube-desktop",
   "productName": "WishTube",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Local-first open video client for Linux and Windows",
   "author": "wishissue",
   "license": "Apache-2.0",
@@ -60,12 +60,20 @@
     },
     "nsis": {
       "oneClick": false,
-      "allowToChangeInstallationDirectory": true
+      "allowToChangeInstallationDirectory": true,
+      "artifactName": "WishTube-Setup-${version}.${ext}"
     },
     "asarUnpack": [
       "node_modules/ffmpeg-static/ffmpeg",
       "node_modules/ffmpeg-static/ffmpeg.exe",
       "node_modules/ffprobe-static/bin/**"
-    ]
+    ],
+    "portable": {
+      "artifactName": "WishTube-${version}-portable.${ext}"
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wishissue/wishtube-desktop-source.git"
   }
 }

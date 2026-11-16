@@ -5,9 +5,10 @@ const fs = require('node:fs');
 const { Store } = require('./store.cjs');
 const { Downloads } = require('./downloads.cjs');
 const browserPlayer = require('./browser.cjs');
+const { Updater } = require('./updater.cjs');
 
-const UA = `WishTube/${app.getVersion()} (+https://github.com/wishissue/wishtube)`;
-let win = null, tray = null, quitting = false, store, downloads, bp;
+const UA = `WishTube/${app.getVersion()} (+https://github.com/wishissue/wishtube-desktop-source)`;
+let win = null, tray = null, quitting = false, store, downloads, bp, updater;
 
 if (!app.requestSingleInstanceLock()) app.quit();
 app.on('second-instance', (_e, argv) => {
@@ -18,29 +19,51 @@ app.on('second-instance', (_e, argv) => {
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
-/** Network runs in the main process: no CORS, one polite User-Agent, retry with backoff on GETs. */
+/** Network runs in the main process: no CORS, one polite User-Agent. A dead host must fail FAST (a feed is only as quick as its slowest request):
+ *  GETs get a short timeout and one quick retry, and only transient errors (429 / 5xx / network) are retried. */
 async function netJson(url, opts = {}) {
-  const tries = opts.body ? 1 : 3;
+  const tries = opts.body ? 1 : 2, timeout = Math.min(Math.max(+opts.timeout || 9000, 2000), 60000);
   let last;
   for (let i = 0; i < tries; i++) {
     try {
       const res = await fetch(url, {
         method: opts.body ? 'POST' : 'GET',
         headers: { 'User-Agent': UA, Accept: 'application/json', ...(opts.body ? { 'Content-Type': 'application/json' } : {}) },
-        body: opts.body, signal: AbortSignal.timeout(opts.timeout || 20000),
+        body: opts.body, signal: AbortSignal.timeout(timeout),
       });
-      if (res.status === 429 || res.status >= 500) { last = new Error('HTTP ' + res.status); await sleep(400 * 2 ** i); continue; }
-      if (!res.ok) throw new Error('HTTP ' + res.status);
+      if (res.status === 429 || res.status >= 500) { last = new Error('HTTP ' + res.status); if (i < tries - 1) await sleep(350); continue; }
+      if (!res.ok) throw Object.assign(new Error('HTTP ' + res.status), { final: true });
       return await res.json();
-    } catch (e) { last = e; if (i < tries - 1) await sleep(300 * 2 ** i); }
+    } catch (e) { last = e; if (e.final || i >= tries - 1) break; await sleep(250); }
   }
   throw last;
 }
 
+/** Ask several mirrors for their first byte at the same time and report the fastest that answers. Only http(s); headers only, no body is read. */
+async function raceUrls(urls, opts = {}) {
+  const list = (Array.isArray(urls) ? urls : []).filter(u => typeof u === 'string' && u.length < 2048 && /^https?:\/\//i.test(u)).slice(0, 8);
+  let done = false; const timeout = Math.min(Math.max(+opts.timeout || 4500, 1000), 15000), t0 = Date.now(), failed = [], ctrls = list.map(() => new AbortController());
+  if (!list.length) return { url: null, ms: 0, failed };
+  const probes = list.map((url, i) => (async () => {
+    const timer = setTimeout(() => ctrls[i].abort(), timeout);
+    try {
+      const res = await fetch(url, { headers: { 'User-Agent': UA, Range: 'bytes=0-0' }, signal: ctrls[i].signal });
+      if (!(res.status === 200 || res.status === 206)) throw new Error('HTTP ' + res.status);
+      res.body?.cancel().catch(() => {});
+      return { url, ms: Date.now() - t0 };
+    } catch (e) { if (!done) failed.push({ url, error: ctrls[i].signal.aborted && !e.message.startsWith('HTTP') ? 'timed out' : String(e.message || e).slice(0, 60) }); throw e; }
+    finally { clearTimeout(timer); }
+  })());
+  try { const win = await Promise.any(probes); done = true; ctrls.forEach(c => c.abort()); return { ...win, failed: [...failed] }; }
+  catch { done = true; return { url: null, ms: Date.now() - t0, failed: [...failed] }; }
+}
+
+const NATIVE_BG = '#0e0f12';
+
 function createWindow() {
   win = new BrowserWindow({
     width: 1360, height: 860, minWidth: 900, minHeight: 600,
-    backgroundColor: '#0e0f12', title: 'WishTube', autoHideMenuBar: true, show: false,
+    backgroundColor: NATIVE_BG, title: 'WishTube', autoHideMenuBar: true, show: false,
     icon: path.join(__dirname, '../renderer/icon-512.png'),
     webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true, backgroundThrottling: false },
   });
@@ -72,9 +95,11 @@ app.whenReady().then(() => {
   session.defaultSession.setPermissionRequestHandler((_wc, perm, cb) => cb(ALLOWED.has(perm)));
   session.defaultSession.setPermissionCheckHandler((_wc, perm) => ALLOWED.has(perm));
 
+  updater = new Updater({ app, store, getWin: () => win, ua: UA, shell, quit: () => { quitting = true; app.quit(); } });
   bp = browserPlayer.register(ipcMain, app, () => win);
   const h = ipcMain.handle.bind(ipcMain);
   h('net:json', (_e, url, opts) => netJson(url, opts));
+  h('net:race', (_e, urls, opts) => raceUrls(urls, opts));
   h('store:get', (_e, key, def) => store.get(key, def));
   h('store:set', (_e, key, val) => { store.set(key, val); return true; });
   h('store:path', () => store.dir);
@@ -88,6 +113,12 @@ app.whenReady().then(() => {
   h('dl:open', (_e, file) => { if (typeof file === 'string' && downloads.owns(file) && fs.existsSync(file)) return shell.openPath(file); });
   h('open:external', (_e, url) => { if (/^https?:/.test(url)) shell.openExternal(url); });
   h('win:fullscreen', (_e, on) => { win.setFullScreen(!!on); });
+  h('update:state', () => updater.state());
+  h('update:check', () => updater.check(true));
+  h('update:install', async () => { try { return await updater.install(); } catch (e) { return { error: String(e.message || e) }; } });
+  h('update:skip', (_e, v) => { if (typeof v === 'string') updater.skip(v.slice(0, 40)); return true; });
+  h('update:auto', (_e, on) => { updater.setAuto(on); return true; });
+  h('update:page', () => { const p = updater.info?.page; if (typeof p === 'string' && /^https:\/\/github\.com\//.test(p)) shell.openExternal(p); });
   h('app:relaunch', () => { app.relaunch(); quitting = true; app.quit(); });
   h('win:alwaysOnTop', (_e, on) => { win.setAlwaysOnTop(!!on, 'floating'); return win.isAlwaysOnTop(); });
   h('file:export', async (_e, name, text) => {
@@ -104,6 +135,7 @@ app.whenReady().then(() => {
   });
 
   createWindow();
+  win.webContents.once('did-finish-load', () => updater.startDaily());
   try {
     const img = nativeImage.createFromPath(path.join(__dirname, '../renderer/icon-512.png')).resize({ width: 22, height: 22 });
     tray = new Tray(img);

@@ -1,7 +1,14 @@
 import { qs, parseDate, stripHtml, parseLicense } from '../core/models.js';
+import { net } from '../core/net.js';
 
-const J = (url, o) => window.wt.json(url, o);
+const J = (url, o) => net.json(url, o);
 const PAGE = 20;
+const rnd = n => Math.floor(Math.random() * n), pick = a => a[rnd(a.length)];
+const sample = (a, k) => { const c = [...a]; for (let i = c.length - 1; i > 0; i--) { const j = rnd(i + 1); [c[i], c[j]] = [c[j], c[i]]; } return c.slice(0, k); };
+/** Broad topics used to probe every source, so each refresh brings in things nobody asked for yet. */
+export const TOPICS = ['documentary', 'science', 'history', 'art', 'nature', 'travel', 'cooking', 'technology', 'linux', 'programming', 'animation', 'short film', 'interview', 'tutorial', 'lecture', 'music live', 'gaming', 'space', 'ocean', 'diy', 'electronics', 'philosophy', 'comedy', 'sport', 'architecture', 'retro computing', 'design', 'wildlife', 'podcast', 'news', 'education', 'cinema', 'photography', 'language', 'math', 'chess', 'robotics', 'climate'];
+const PT_SORTS = ['-trending', '-hot', '-likes', '-views', '-publishedAt'];
+const DAYS = 86400;
 const MATURE_TAGS = ['mature', 'porn', 'nsfw', 'xxx'];
 
 /* ------------------------------ PeerTube ------------------------------ */
@@ -29,23 +36,25 @@ export const peertube = {
     const r = await J(qs('https://sepiasearch.org/api/v1/search/videos', { search: q, start: page * PAGE, count: PAGE, sort: s, nsfw: S.mature ? 'true' : 'false' }));
     return (r.data || []).map(o => this.parse(o, 'https://sepiasearch.org', S)).filter(Boolean);
   },
+  /** kind: 'trending' | 'new' | 'random' (a random sort, so repeated refreshes don't see the same ranking). One dead instance never blocks the others. */
   async feed(page, kind, S) {
     const insts = [...new Set([S.ptInstance, ...this.defaults].filter(Boolean))];
-    const n = 20, sort = kind === 'new' ? '-publishedAt' : '-trending';
-    const lists = await Promise.all(insts.map(i => J(qs(`${i}/api/v1/videos`, { start: page * n, count: n, sort, nsfw: S.mature ? 'true' : 'false' }))
+    const n = 20, sort = kind === 'new' ? '-publishedAt' : kind === 'random' ? pick(PT_SORTS) : '-trending';
+    const lists = await Promise.all(insts.map(i => J(qs(`${i}/api/v1/videos`, { start: page * n, count: n, sort, nsfw: S.mature ? 'true' : 'false' }), { timeout: 8000 })
       .then(r => (r.data || []).map(o => this.parse(o, i, S)).filter(Boolean)).catch(() => [])));
     return lists.flat();
   },
   /** Instance feed with provider-side filters (category / tags). */
   async filtered(page, params, S) {
     const insts = [...new Set([S.ptInstance, ...this.defaults].filter(Boolean))], n = 20;
-    const lists = await Promise.all(insts.map(i => J(qs(`${i}/api/v1/videos`, { start: page * n, count: n, sort: '-trending', nsfw: S.mature ? 'true' : 'false', ...params }))
+    const lists = await Promise.all(insts.map(i => J(qs(`${i}/api/v1/videos`, { start: page * n, count: n, sort: '-trending', nsfw: S.mature ? 'true' : 'false', ...params }), { timeout: 8000 })
       .then(r => (r.data || []).map(o => this.parse(o, i, S)).filter(Boolean)).catch(() => [])));
     return lists.flat();
   },
-  async music(q, page, S) {                                        // PeerTube category 1 = Music
-    if (!q) return this.filtered(page, { categoryOneOf: 1 }, S);
-    const r = await J(qs('https://sepiasearch.org/api/v1/search/videos', { search: q, start: page * PAGE, count: PAGE, sort: '-match', categoryOneOf: 1, nsfw: S.mature ? 'true' : 'false' }));
+  async music(q, page, S) {                                        // PeerTube category 1 = Music. S.musicSort: popular (most views) | trending | new
+    const sort = { popular: '-views', trending: '-trending', new: '-publishedAt' }[S.musicSort] || '-views';
+    if (!q) return this.filtered(page, { categoryOneOf: 1, sort }, S);
+    const r = await J(qs('https://sepiasearch.org/api/v1/search/videos', { search: q, start: page * PAGE, count: PAGE, sort: S.musicSort === 'new' ? '-publishedAt' : '-match', categoryOneOf: 1, nsfw: S.mature ? 'true' : 'false' }));
     return (r.data || []).map(o => this.parse(o, 'https://sepiasearch.org', S)).filter(Boolean);
   },
   shorts(page, S) { return this.filtered(page, { tagsOneOf: ['shorts', 'short'] }, S); },
@@ -125,7 +134,10 @@ export const odysee = {
     };
   },
   async run(p, S) { const r = await rpc('claim_search', this.base(S, p.page, p.extra)); return (r.items || []).map(i => this.parse(i, S)).filter(Boolean); },
-  music(q, page, S) { return this.run({ page, extra: { stream_types: ['audio', 'video'], any_tags: ['music'], ...(q ? { text: q } : { order_by: ['trending_group', 'trending_mixed'] }) } }, S); },
+  music(q, page, S) {                                              // S.musicSort: popular (most supported all-time) | trending | new
+    const order = { popular: ['effective_amount'], trending: ['trending_group', 'trending_mixed'], new: ['release_time'] }[S.musicSort] || ['effective_amount'];
+    return this.run({ page, extra: { stream_types: ['audio', 'video'], any_tags: ['music'], ...(q && S.musicSort !== 'new' ? { text: q } : { order_by: order, ...(q ? { text: q } : {}) }) } }, S);
+  },
   shorts(page, S) { return this.run({ page, extra: { any_tags: ['shorts', 'short'], order_by: ['release_time'] } }, S); },
   async comments(v, { page = 0, sort = 'new' } = {}) {
     const claim = v.sid.split('|')[1], n = 25;
@@ -138,7 +150,13 @@ export const odysee = {
     return (r.items || []).map(x => ({ id: x.comment_id, thread: c.thread, depth: 1, user: (x.channel_name || '@anonymous').replace(/^@/, ''), avatar: null, text: x.comment || '', likes: x.likes ?? null, date: (x.timestamp || 0) * 1000, replies: 0 }));
   },
   search(q, page, sort, S) { return this.run({ page, extra: { text: q, ...(sort === 'newest' ? { order_by: ['release_time'] } : sort === 'popular' ? { order_by: ['effective_amount'] } : {}) } }, S); },
-  feed(page, kind, S) { return this.run({ page, extra: { order_by: kind === 'new' ? ['release_time'] : ['trending_group', 'trending_mixed'] } }, S); },
+  feed(page, kind, S) {
+    if (kind === 'random') {                                       // "best of the last N days" with a random window and ranking: different every refresh
+      const order = pick([['trending_group', 'trending_mixed'], ['effective_amount'], ['release_time']]);
+      return this.run({ page, extra: { order_by: order, ...(order[0] === 'release_time' ? {} : { release_time: '>' + (Math.floor(Date.now() / 1000) - pick([7, 30, 90, 365]) * DAYS) }) } }, S);
+    }
+    return this.run({ page, extra: { order_by: kind === 'new' ? ['release_time'] : ['trending_group', 'trending_mixed'] } }, S);
+  },
   creatorVideos(cid, page, S) { return this.run({ page, extra: { channel_ids: [cid], order_by: ['release_time'] } }, S); },
   async creatorInfo(cid) {
     const r = await rpc('claim_search', { claim_ids: [cid], claim_type: ['channel'], page_size: 1, no_totals: true });
@@ -147,9 +165,11 @@ export const odysee = {
   },
   async resolveStream(v) {
     const [name, claim, sd] = v.sid.split('|'), n = encodeURIComponent(name);
-    const viaRpc = await rpc('get', { uri: `lbry://${name}#${claim}` }).then(r => r.streaming_url).catch(() => null);
-    const urls = [`https://player.odycdn.com/api/v3/streams/free/${n}/${claim}/${sd}.mp4`, `https://lbrytv.ca/api/v3/streams/free/${n}/${claim}/${sd}.mp4`, viaRpc].filter(Boolean);
-    return { urls, hls: false, download: urls[0], options: [{ kind: 'muxed', url: urls[0], height: 0, ext: 'mp4', size: 0 }], captions: [], chapters: [], desc: null };
+    // The two CDN URLs usually work and are known immediately. The slow "get" RPC (which has to start the stream on the network) is no longer on the critical path:
+    // it is offered as `lazy`, and the player only asks for it after the CDN URLs have failed.
+    const urls = [`https://player.odycdn.com/api/v3/streams/free/${n}/${claim}/${sd}.mp4`, `https://lbrytv.ca/api/v3/streams/free/${n}/${claim}/${sd}.mp4`];
+    const lazy = async () => { const u = await rpc('get', { uri: `lbry://${name}#${claim}` }).then(r => r.streaming_url).catch(() => null); return u ? [u] : []; };
+    return { urls, lazy, hls: false, download: urls[0], options: [{ kind: 'muxed', url: urls[0], height: 0, ext: 'mp4', size: 0 }], captions: [], chapters: [], desc: null };
   },
   async resolveUrl(url, S) {
     const u = new URL(url); if (u.host.replace('www.', '') !== 'odysee.com') return null;
@@ -181,9 +201,18 @@ export const archive = {
     return (r.response?.docs || []).map(d => this.parse(d)).filter(Boolean);
   },
   search(q, page, sort) { return this.run(`mediatype:movies AND (${q})`, sort === 'newest' ? 'date desc' : sort === 'oldest' ? 'date asc' : 'downloads desc', page); },
-  feed(page, kind) { return this.run('mediatype:movies AND (collection:opensource_movies OR collection:feature_films OR collection:prelinger OR collection:computerchronicles)', kind === 'new' ? 'date desc' : 'downloads desc', page); },
+  feed(page, kind) {
+    if (kind === 'random') {                                       // a random handful of collections, ranking and depth
+      const cols = sample(['opensource_movies', 'feature_films', 'prelinger', 'computerchronicles', 'classic_tv', 'vlogs', 'artsandmusicvideos', 'gamevideos', 'newsandpublicaffairs', 'animationandcartoons', 'nasa', 'sports'], 3 + rnd(3));
+      return this.run(`mediatype:movies AND (${cols.map(c => 'collection:' + c).join(' OR ')})`, pick(['downloads desc', 'week desc', 'date desc', 'downloads desc']), page);
+    }
+    return this.run('mediatype:movies AND (collection:opensource_movies OR collection:feature_films OR collection:prelinger OR collection:computerchronicles)', kind === 'new' ? 'date desc' : 'downloads desc', page);
+  },
   creatorVideos(cid, page) { return this.run(`creator:"${cid.replace(/"/g, '')}" AND (mediatype:movies OR mediatype:audio)`, 'date desc', page); },
-  music(q, page, S) { return this.run(`mediatype:audio AND (collection:netlabels OR collection:opensource_audio OR collection:audio_music)${q ? ` AND (${q})` : ''}`, 'downloads desc', page); },
+  music(q, page, S) {
+    const sort = { popular: 'downloads desc', trending: 'week desc', new: 'date desc' }[S.musicSort] || 'downloads desc';
+    return this.run(`mediatype:audio AND (collection:netlabels OR collection:opensource_audio OR collection:audio_music)${q ? ` AND (${q})` : ''}`, sort, page);
+  },
   async comments(v) {                                              // Internet Archive "reviews" are the item's public comments
     const m = await J(`https://archive.org/metadata/${v.sid}`);
     const items = (m.reviews || []).map((r, i) => ({ id: 'r' + i, thread: 'r' + i, user: r.reviewer || 'Anonymous', avatar: null, text: [r.reviewtitle, stripHtml(r.reviewbody || '')].filter(Boolean).join('\n\n'), likes: null, date: parseDate(r.reviewdate || r.createdate), replies: 0, stars: Number(r.stars) || null }));
@@ -242,7 +271,9 @@ export const ccc = {
     return all.slice(page * PAGE, (page + 1) * PAGE).map(e => this.parse(e)).filter(Boolean);
   },
   async feed(page, kind) {
-    const all = [...await cccEvents()].sort((a, b) => kind === 'new' ? (b.date || '').localeCompare(a.date || '') : (b.view_count || 0) - (a.view_count || 0));
+    const ev = await cccEvents();
+    if (kind === 'random') return sample(ev, PAGE).map(e => this.parse(e)).filter(Boolean);       // the whole archive is in memory, so a true random sample is free
+    const all = [...ev].sort((a, b) => kind === 'new' ? (b.date || '').localeCompare(a.date || '') : (b.view_count || 0) - (a.view_count || 0));
     return all.slice(page * PAGE, (page + 1) * PAGE).map(e => this.parse(e)).filter(Boolean);
   },
   async creatorVideos(cid, page) {
@@ -292,7 +323,7 @@ export const wikimedia = {
     return Object.values(r.query?.pages || {}).sort((a, b) => (a.index || 0) - (b.index || 0)).map(p => this.parse(p, true)).filter(Boolean);
   },
   search(q, page) { return this.run(q, page); },
-  feed(page) { return this.run('', page); },
+  feed(page, kind) { return kind === 'new' ? this.run('', page) : this.run(pick(TOPICS), rnd(3)); },
   creatorVideos(cid, page) { return this.run(cid, page); },
   async creatorInfo(cid) { return { name: cid, desc: 'Wikimedia Commons contributor', avatar: null, followers: null, url: 'https://commons.wikimedia.org' }; },
   async resolveStream(v) { const u = v.direct || v.url; return { urls: [u], hls: false, download: u, options: [{ kind: 'muxed', url: u, height: 0, ext: (/\.(webm|ogv|mp4)$/i.exec(u) || [])[1]?.toLowerCase() || 'webm', size: 0 }], captions: [], chapters: [], desc: null }; },

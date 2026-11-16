@@ -2,6 +2,8 @@ name: Desktop builds
 on:
   push: { tags: ['v*'] }
   workflow_dispatch:
+permissions:
+  contents: write
 jobs:
   build:
     strategy:
@@ -21,5 +23,12 @@ jobs:
         with:
           name: wishtube-${{ matrix.os }}
           path: |
+            dist/*.AppImage
+            dist/*.exe
+      # Publishing a GitHub Release is what the in-app update checker looks for.
+      - uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/v')
+        with:
+          files: |
             dist/*.AppImage
             dist/*.exe

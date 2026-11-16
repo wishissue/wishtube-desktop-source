@@ -1,12 +1,14 @@
 import { Queue } from './queue.js';
 import { Ranker } from '../rec/engine.js';
 import { normalizeTheme } from './themes.js';
+import { FEED_DEFAULTS } from '../rec/filters.js';
 import { SOURCE_IDS, creatorKey } from './models.js';
 
 const DEFAULTS = {
   theme: 'terminal', accent: null, density: 'comfortable', sidebar: true, sources: Object.fromEntries(SOURCE_IDS.map(s => [s, true])), order: SOURCE_IDS,
   ptInstance: 'https://framatube.org', mature: false, languages: ['en'], explore: 0.35, freshness: 0.5, diversity: 0.6,
   autoplay: true, motion: true, motionLevel: 'full', closeToTray: false, downloadDir: null, onboarded: false, interests: [],
+  feed: { ...FEED_DEFAULTS }, musicSort: 'popular',
   font: 'theme', uiScale: 1, thumbSize: 272, radius: null, rail: 'full', railSide: 'left', nav: {}, bgMode: 'theme', bgPreset: 'aurora', bgBlur: 0, bgDim: 0.35, panelOpacity: 0.72,
   player: { speed: 1, skip: 10, captions: false, theater: false, rememberVolume: true },
 };
@@ -31,7 +33,7 @@ export const state = {
 
   async load() {
     const [s, l, p] = await Promise.all([window.wt.get('settings', null), window.wt.get('library', null), window.wt.get('profile', null)]);
-    this.settings = { ...DEFAULTS, ...(s || {}), sources: { ...DEFAULTS.sources, ...(s?.sources || {}) }, player: { ...DEFAULTS.player, ...(s?.player || {}) }, nav: { ...(s?.nav || {}) } };
+    this.settings = { ...DEFAULTS, ...(s || {}), sources: { ...DEFAULTS.sources, ...(s?.sources || {}) }, player: { ...DEFAULTS.player, ...(s?.player || {}) }, nav: { ...(s?.nav || {}) }, feed: { ...DEFAULTS.feed, ...(s?.feed || {}), shelves: { ...DEFAULTS.feed.shelves, ...(s?.feed?.shelves || {}) } } };
     this.bgImage = await window.wt.get('bgimage', null);
     this.lib = { ...structuredClone(EMPTY_LIB), ...(l || {}) };
     this.ranker = new Ranker(p || undefined, this.settings);

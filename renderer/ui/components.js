@@ -30,11 +30,24 @@ const sub = v => [fmtViews(v.views), fmtAgo(v.date)].filter(Boolean).join(' · '
 /** Right-click / ⋯ menu. */
 export function contextMenu(x, y, items) {
   document.querySelectorAll('.ctx').forEach(e => e.remove());
-  const m = h('div.ctx', items.filter(Boolean).map(it => h('button', { onclick: () => { m.remove(); it.run(); } }, icon(it.icon, 17), it.label)));
+  const opener = document.activeElement;
+  const btns = items.filter(Boolean).map(it => h('button', { type: 'button', role: 'menuitem', onclick: () => { close(false); it.run(); } }, icon(it.icon, 17), it.label));
+  const m = h('div.ctx', { role: 'menu', tabindex: -1 }, btns);
+  const close = (restore = true) => { m.remove(); removeEventListener('mousedown', off, true); removeEventListener('hashchange', onNav); removeEventListener('resize', onNav); removeEventListener('keydown', key, true); document.getElementById('view')?.removeEventListener('scroll', onNav); if (restore && opener?.isConnected) opener.focus?.(); };
+  const off = e => { if (!m.contains(e.target)) close(false); }, onNav = () => close(false);
+  const key = e => {
+    if (!m.isConnected) return;
+    const i = btns.indexOf(document.activeElement);
+    if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(); }
+    else if (e.key === 'ArrowDown') { e.preventDefault(); btns[(i + 1) % btns.length].focus(); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); btns[(i - 1 + btns.length) % btns.length].focus(); }
+    else if (e.key === 'Home') { e.preventDefault(); btns[0].focus(); } else if (e.key === 'End') { e.preventDefault(); btns.at(-1).focus(); }
+    else if (e.key === 'Tab') close(false);
+  };
   document.body.append(m);
-  const r = m.getBoundingClientRect(); m.style.left = Math.min(x, innerWidth - r.width - 10) + 'px'; m.style.top = Math.min(y, innerHeight - r.height - 10) + 'px';
-  const off = e => { if (!m.contains(e.target)) { m.remove(); removeEventListener('mousedown', off, true); } };
-  setTimeout(() => addEventListener('mousedown', off, true), 0);
+  const r = m.getBoundingClientRect(); m.style.left = Math.max(8, Math.min(x, innerWidth - r.width - 10)) + 'px'; m.style.top = Math.max(8, Math.min(y, innerHeight - r.height - 10)) + 'px';
+  setTimeout(() => { addEventListener('mousedown', off, true); addEventListener('hashchange', onNav); addEventListener('resize', onNav); document.getElementById('view')?.addEventListener('scroll', onNav, { passive: true }); }, 0);
+  addEventListener('keydown', key, true); btns[0]?.focus();
 }
 const withAudio = f => import('../core/audio.js').then(m => f(m.audio));
 export const videoMenu = (v, refresh) => [

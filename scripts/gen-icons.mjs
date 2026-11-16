@@ -12,7 +12,7 @@ const MAP = {
   trash: 'trash', folder: 'folder', palette: 'palette', compass: 'compass', sliders: 'sliders-horizontal',
   music: 'music', shorts: 'clapperboard', msg: 'message-square', queue: 'list-music', listplus: 'list-plus', list: 'list', shuffle: 'shuffle', repeat: 'repeat', repeat1: 'repeat-1',
   prev: 'skip-back', disc: 'disc-3', up: 'chevron-up', down: 'chevron-down', thumbs: 'thumbs-up', reply: 'corner-down-right', globe: 'globe', image: 'image', github: 'github',
-  youtube: 'youtube', coffee: 'coffee', lock: 'lock', user: 'user', phone: 'smartphone', folderplus: 'folder-plus', link: 'link', copy: 'copy', pencil: 'pencil', grip: 'grip-vertical', rotate: 'rotate-cw',
+  youtube: 'youtube', coffee: 'coffee', lock: 'lock', user: 'user', phone: 'smartphone', folderplus: 'folder-plus', link: 'link', copy: 'copy', pencil: 'pencil', grip: 'grip-vertical', rotate: 'rotate-cw', terminal: 'terminal', droplet: 'droplet',
 };
 const out = {};
 for (const [name, file] of Object.entries(MAP)) {

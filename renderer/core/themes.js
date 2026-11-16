@@ -15,4 +15,4 @@ export const THEMES = [
 ];
 export const THEME_IDS = THEMES.map(t => t.id);
 export const DEFAULT_THEME = 'terminal';
-export const normalizeTheme = t => ({ dark: 'terminal', light: 'classic', glass: 'oled', wishblue: 'oled' })[t] || (THEME_IDS.includes(t) ? t : DEFAULT_THEME);
+export const normalizeTheme = t => ({ dark: 'terminal', light: 'classic', glass: 'oled', liquid: 'oled', wishblue: 'oled' })[t] || (THEME_IDS.includes(t) ? t : DEFAULT_THEME);

@@ -50,10 +50,12 @@ test('licenses for everything vendored are shipped', () => {
   for (const n of ['Inter', 'JetBrainsMono', 'NotoSans', 'Lucide', 'OpenProps', '7.css', 'XP.css', 'system.css']) assert.ok(have.some(f => f.startsWith(n)), n);
 });
 
-test('glass and WishTube Blue themes are gone: no theme, styles, orbs or native-window code, and old saves migrate', () => {
-  const css = read('themes.css'), html = read('index.html'), main = readFileSync(new URL('../main/main.cjs', import.meta.url), 'utf8');
-  assert.ok(!/data-theme="glass"/.test(css)); assert.ok(!/class="orb/.test(html)); assert.ok(!/glassMode|backgroundMaterial|vibrancy/.test(main));
-  assert.ok(!THEMES.some(t => t.id === 'glass')); assert.equal(normalizeTheme('glass'), 'oled'); assert.equal(normalizeTheme('wishblue'), 'oled'); assert.ok(!THEMES.some(t => t.id === 'wishblue'));
+test('liquid glass is gone: old "glass"/"liquid"/"wishblue" ids migrate to OLED Black', () => {
+  assert.ok(!THEMES.some(t => ['liquid', 'glass', 'wishblue'].includes(t.id)));
+  for (const old of ['glass', 'liquid', 'wishblue']) assert.equal(normalizeTheme(old), 'oled');
+  assert.ok(!existsSync(new URL('../renderer/core/glass.js', import.meta.url)));
+  assert.ok(!/data-theme="liquid"/.test(read('themes.css')));
+  assert.ok(!/lg-lens/.test(read('index.html')));
 });
 
 test('main process allows the fullscreen permission and the search icon is a real button', () => {

@@ -37,3 +37,10 @@ Persistent candidate pool (instant start, background refresh, 1500 videos), inte
 - **Themes**: 11 themes incl. OLED, Material 3, Media Center, Monochrome; accent colours, fonts, text size, density, thumbnail size, corner radius, sidebar layout, custom backgrounds, motion levels.
 
 Downloads use the FFmpeg binaries from `ffmpeg-static` / `ffprobe-static`; if the bundled one cannot run, WishTube falls back to `ffmpeg` on your PATH.
+
+## Patch notes: updates, simpler loading, no Liquid Glass
+
+- **Update checker**: once a day (and at start-up if a day has passed) WishTube looks at the latest Release of [wishissue/wishtube-desktop-source](https://github.com/wishissue/wishtube-desktop-source). If there is a newer version a small card offers **Update now** (downloads with a progress bar, then installs and restarts), **Later** or **Skip this version**. `Settings > Updates` has *Check now* and a daily-check switch. To ship an update: bump `version` in `package.json` and push a tag like `v0.4.0`; the workflow builds and publishes the Release.
+- **Loading**: the terminal-style activity logs, the status pill and the "show what this player is doing" button are gone. Every wait now shows one animated logo ring with a single plain sentence.
+- **Liquid Glass removed** (theme, settings panel, see-through window code). Saved settings that used it switch to OLED Black.
+- **Music and Shorts picking**: popular, good-quality items lead (about 7 in 10 slots); the other 3 in 10 are decent but less-known picks for discovery. Music weighs views, track-like length (about 1.5 to 8 min) and song-like titles, and pushes podcasts, hour-long mixes and clips to the bottom. The order is reshuffled every session, and on the new **Shuffle** button in Music.

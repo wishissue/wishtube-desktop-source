@@ -13,7 +13,7 @@ export function library(root, { tab = 'history' }) {
   const body = h('div'), tabs = h('div.chips');
   const items = t => t === 'playlists' ? Object.values(state.lib.playlists) : t === 'history' ? state.lib.history.map(x => x.video) : Object.values(state.lib[t]).reverse();
   function draw() {
-    clear(tabs).append(...TABS.map(([k, l]) => h('button.chip', { class: k === tab ? 'on' : '', onclick: () => go('/library/' + k) }, l, h('span', { style: { opacity: .6 } }, items(k).length || ''))));
+    clear(tabs).append(...TABS.map(([k, l]) => h('button.chip', { class: k === tab ? 'on' : '', onclick: () => go('/library/' + k) }, l, items(k).length ? h('span', { style: { opacity: .6 } }, items(k).length) : null)));
     clear(body); const list = items(tab);
     if (tab === 'playlists') return playlistsTab(body, draw);
     if (!list.length) return body.append(h('div.empty', h('h2', 'Nothing here yet'), h('p', tab === 'history' ? 'Videos you watch show up here.' : 'Use the buttons on any video to fill this up.')));

@@ -17,6 +17,7 @@ import { shorts } from './ui/shorts.js';
 import { playlistPage } from './ui/playlists.js';
 import { mountMiniPlayer } from './ui/miniplayer.js';
 import { audio } from './core/audio.js';
+import { initUpdates } from './ui/updates.js';
 
 const ROUTES = [
   [/^\/$/, () => home, 'home'], [/^\/search\/(.*)$/, m => (r) => search(r, { q: decodeURIComponent(m[1]) }), null],
@@ -47,6 +48,16 @@ async function route() {
   }
   go('/');
 }
+
+/** Accessibility safety net: any switch/input/select without a name takes the title of the row it sits in. */
+function nameControls() {
+  const title = el => { for (let n = el.parentElement; n && n.id !== 'view' && n !== document.body; n = n.parentElement) { const t = n.querySelector(':scope > div > b, :scope > b, :scope b, :scope label, :scope summary')?.textContent?.trim(); if (t) return t; } return ''; };
+  document.querySelectorAll('[role=switch]:not([aria-label]), input:not([aria-label]):not([type=hidden]), select:not([aria-label])').forEach(el => {
+    const t = title(el) || el.placeholder || el.title; if (t) el.setAttribute('aria-label', t.slice(0, 80));
+  });
+}
+let nameT = null;
+new MutationObserver(() => { clearTimeout(nameT); nameT = setTimeout(nameControls, 60); }).observe(document.documentElement, { childList: true, subtree: true });
 
 function setNav(id) { document.querySelectorAll('#rail .nav').forEach(n => n.classList.toggle('on', n.dataset.id === id)); }
 
@@ -109,7 +120,7 @@ window.addEventListener('unhandledrejection', e => console.warn('unhandled', e.r
   window.wt.on('open-url', async url => { const v = await sources.resolveUrl(url); if (v) go(`/watch/${encodeURIComponent(v.id)}`); });
   window.wt.on('fullscreen', () => {});
   const dlBadge = window.wt.on('dl:update', d => { if (d.state === 'done') import('./ui/dom.js').then(m => m.toast('Download finished: ' + d.title.slice(0, 40))); });
-  shell(); await route();
+  shell(); initUpdates(); await route();
   const sp = document.getElementById('splash'); if (sp) { sp.classList.add('out'); setTimeout(() => sp.remove(), 600); }
   if (!state.settings.onboarded) onboarding(() => route());
   setInterval(() => state.ranker.dirty && (state.ranker.dirty = false, state.flushProfile()), 30000);

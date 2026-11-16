@@ -7,6 +7,9 @@ import { parseChapters, SOURCES } from '../core/models.js';
 import { Player } from './player.js';
 import { browserPlayer } from './browserplayer.js';
 import { downloadDialog } from './downloads.js';
+import { terminal } from './terminal.js';
+import { trace } from '../core/trace.js';
+import { friendly } from '../core/net.js';
 import { commentsPanel } from './comments.js';
 import { audio } from '../core/audio.js';
 import { avatar, mini, go, watchPath, creatorPath, contextMenu, videoMenu } from './components.js';
@@ -24,7 +27,7 @@ export async function watch(root, { id }) {
     if (player) { player.media.pause(); player.el.style.display = 'none'; } else clear(player$);
     bp = browserPlayer(player$, v, { onBack: () => {
       bp = null;
-      if (player) { player.el.style.display = ''; player.err?.remove(); player.spin.style.display = ''; player.load(0); player.el.focus({ preventScroll: true }); } else location.reload();
+      if (player) { player.el.style.display = ''; player.err?.remove(); player.err = null; player.failedAll = false; player.t0 = Date.now(); player.load(0); player.el.focus({ preventScroll: true }); } else location.reload();
     } });
   }
   const refreshRelated = () => {
@@ -34,17 +37,20 @@ export async function watch(root, { id }) {
   };
   refreshRelated();
 
-  const spinner = h('div.player', h('div.buffering', h('div.spin')));
+  // While the stream is being looked up, show what is happening instead of a spinner.
+  const scope = 'play:' + v.id, t0 = Date.now(); trace.info(scope, `Opening “${v.title.slice(0, 60)}”`);
+  const lookup = terminal({ scopes: [scope], since: t0, title: 'WishTube · opening this video', max: 10, className: 'over', headline: () => 'Looking up the stream' });
+  const spinner = h('div.player', h('div.pload', lookup.el));
   player$.append(spinner);
 
   // stream resolution
   let stream, desc = v.desc || '', chapters = [];
-  try { stream = await sources.stream(v); } catch (e) {
-    if (!alive) return () => {};
-    clear(player$).append(h('div.player', h('div.perr', h('div', h('h2', 'Couldn’t load this video'), h('p.sub', e.message)), h('div.row', { style: { justifyContent: 'center', flexWrap: 'wrap' } }, h('button.btn.pri', { onclick: () => { location.reload(); } }, 'Try Again'), h('button.btn', { onclick: () => window.wt.openExternal(v.url) }, icon('ext', 16), 'Open Original'), h('button.btn', { onclick: openBrowser }, icon('compass', 16), 'Pretend as Browser')))));
+  try { stream = await sources.stream(v, { scope }); lookup.stop(); } catch (e) {
+    lookup.stop(); if (!alive) return () => {};
+    clear(player$).append(h('div.player', h('div.perr', h('div', h('h2', 'Couldn’t load this video'), h('p.sub', friendly(e))), h('div.row', { style: { justifyContent: 'center', flexWrap: 'wrap' } }, h('button.btn.pri', { onclick: () => { location.reload(); } }, 'Try Again'), h('button.btn', { onclick: () => window.wt.openExternal(v.url) }, icon('ext', 16), 'Open Original'), h('button.btn', { onclick: openBrowser }, icon('compass', 16), 'Pretend as Browser')))));
     renderInfo(null); return () => { alive = false; bp?.destroy(); };
   }
-  if (!alive) return () => {};
+  if (!alive) { return () => {}; }
   if (stream.dur && !v.dur) v.dur = stream.dur;
   desc = stream.desc || v.desc || '';
   chapters = stream.chapters?.length ? stream.chapters : parseChapters(desc);
@@ -54,7 +60,7 @@ export async function watch(root, { id }) {
   const inQueue = () => state.vq.current?.id === v.id && state.vq.length > 1;
   const goNext = (auto = false) => { if (inQueue()) { const n = state.vq.next(auto); if (n) return go(watchPath(n)); if (auto) return; } if (related[0]) go(watchPath(related[0].v)); };
   const goPrev = () => { if (inQueue() && state.vq.index > 0) { const n = state.vq.prev(); if (n) return go(watchPath(n)); } history.back(); };
-  player = new Player({ video: v, stream, chapters, startAt, prefs: (prefs.volume ??= state.settings.player.rememberVolume ? state.settings.player.volume ?? 1 : 1, prefs), opts: state.settings.player, onBrowser: openBrowser, onPrev: () => history.back(), onNext: () => related[0] && go(watchPath(related[0].v)), onTheater: () => { page.classList.toggle('theater'); },
+  player = new Player({ video: v, stream, chapters, startAt, prefs: (prefs.volume ??= state.settings.player.rememberVolume ? state.settings.player.volume ?? 1 : 1, prefs), opts: { ...state.settings.player, scope, since: t0 }, onBrowser: openBrowser, onPrev: () => history.back(), onNext: () => related[0] && go(watchPath(related[0].v)), onTheater: () => { page.classList.toggle('theater'); },
     onNext: () => goNext(false), onPrev: goPrev,
     onEnded: () => { if (!state.settings.autoplay) return; const nx = inQueue() ? state.vq.items[state.vq.index + 1] || (state.vq.repeat !== 'off' && state.vq.items[0]) : related[0]?.v; if (nx) { toast(`Up next: ${nx.title.slice(0, 50)}`); setTimeout(() => alive && goNext(true), 900); } } });
   player.addMediaSession(v, () => history.back(), () => related[0] && go(watchPath(related[0].v)));
