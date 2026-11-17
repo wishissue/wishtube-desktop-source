@@ -1,6 +1,6 @@
 # WishTube Desktop
 
-Local-first open video client for Linux and Windows. PeerTube, Odysee, Internet Archive, media.ccc.de and Wikimedia Commons in one clean app. No account, no tracking, no server.
+Local-first open video client for Linux, Windows and macOS. PeerTube, Odysee, Internet Archive, media.ccc.de and Wikimedia Commons in one clean app. No account, no tracking, no server.
 
 ## Run / build
 ```
@@ -9,10 +9,15 @@ npm start                 # run from source
 npm test                  # ranker tests
 npm run dist:linux        # dist/WishTube-*-linux-x86_64.AppImage
 npm run dist:win          # dist/WishTube-*-win-x64.exe (portable) + installer
+npm run dist:mac          # dist/WishTube-*-mac-{arm64,x64}.dmg + .zip   (dmg needs a Mac; use dist:mac:zip elsewhere)
+npm run dist              # Linux + Windows + macOS zips in one go (works from Linux)
 ```
+Cross-building is safe: `scripts/before-pack.cjs` downloads the FFmpeg that matches each target, and `scripts/after-pack.cjs` ad-hoc signs the macOS app.
 Fedora: `chmod +x WishTube-*.AppImage && ./WishTube-*.AppImage`
 (If it complains about FUSE: `sudo dnf install fuse fuse-libs`, or run with `--appimage-extract-and-run`.)
-For a properly built Windows exe, push a `v*` tag: GitHub Actions builds both on native runners.
+For properly built releases, push a `v*` tag: GitHub Actions builds Linux, Windows and macOS on native runners.
+
+**macOS first launch.** The app is ad-hoc signed, not notarised (that needs a paid Apple Developer ID), so Gatekeeper asks once: right-click WishTube > Open > Open. If macOS says it is "damaged", run `xattr -cr /Applications/WishTube.app` once.
 
 ## The ranker ("Atlas") – `renderer/rec/`
 - **Multi-interest taste**: up to 8 interest clusters, plus a 2-hour session vector.
@@ -50,3 +55,10 @@ Downloads use the FFmpeg binaries from `ffmpeg-static` / `ffprobe-static`; if th
 - **Loading** is a Material-style wavy circular indicator in your theme's accent colour, with one plain sentence. The app icon is never shown while loading, including on the splash screen.
 - **Failures and empty states** show a cat on the left and the explanation on the right, with a joke that changes. The card only uses theme colours, and body text stays above 11:1 contrast in all themes.
 - Add your own cats and jokes in `renderer/assets/cats/README.md`.
+
+## Patch 0.3.1: loading animation, macOS, fixes
+
+- **Fixed: the rotating loading ring did not turn.** The blanket "no animation" rules (the OS *reduce motion* preference, which Windows, GNOME and KDE switch on when animations are disabled, and *Settings > Animations > Off*) squashed every animation to 0.001 ms, which froze the infinite loaders and made the app look hung. Loaders are feedback, not decoration: they now keep turning in those modes, in a calmer form (steady arc, no morphing). Covered by `test/loader-motion.test.js`.
+- **macOS build** (Apple Silicon and Intel), with a proper menu bar (Cmd+C/V/Q/H work) and macOS support in the update checker.
+- **Fixed:** a second launch no longer builds a window, tray icon and media-key shortcuts before quitting; no crash from IPC calls (fullscreen, always-on-top, dialogs) when the window is closed on macOS.
+- **Fixed:** FFmpeg for cross-built installers now matches the target OS/CPU instead of the build machine.

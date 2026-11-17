@@ -10,7 +10,8 @@ const { Updater } = require('./updater.cjs');
 const UA = `WishTube/${app.getVersion()} (+https://github.com/wishissue/wishtube-desktop-source)`;
 let win = null, tray = null, quitting = false, store, downloads, bp, updater;
 
-if (!app.requestSingleInstanceLock()) app.quit();
+const gotLock = app.requestSingleInstanceLock();
+if (!gotLock) app.quit();
 app.on('second-instance', (_e, argv) => {
   if (win) { if (win.isMinimized()) win.restore(); win.show(); win.focus(); }
   const url = argv.find(a => /^https?:\/\//.test(a));
@@ -60,6 +61,16 @@ async function raceUrls(urls, opts = {}) {
 
 const NATIVE_BG = '#0e0f12';
 
+/** macOS shows one global menu bar. Without an Edit menu Cmd+C / Cmd+V do nothing in text fields, and without an app menu Cmd+Q and Cmd+H are gone. */
+function macMenu() {
+  if (process.platform !== 'darwin') return;
+  Menu.setApplicationMenu(Menu.buildFromTemplate([
+    { role: 'appMenu' }, { role: 'editMenu' },
+    { label: 'View', submenu: [{ role: 'reload' }, { role: 'togglefullscreen' }, { type: 'separator' }, { role: 'resetZoom' }, { role: 'zoomIn' }, { role: 'zoomOut' }] },
+    { role: 'windowMenu' },
+  ]));
+}
+
 function createWindow() {
   win = new BrowserWindow({
     width: 1360, height: 860, minWidth: 900, minHeight: 600,
@@ -80,6 +91,7 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
+  if (!gotLock) return;   // a second copy must not build a window, tray or shortcuts before it quits
   store = new Store(path.join(app.getPath('userData'), 'data'));
   downloads = new Downloads({ app, getWin: () => win, ua: UA, getDir: () => store.get('settings', {}).downloadDir, store });
 
@@ -112,7 +124,7 @@ app.whenReady().then(() => {
   h('dl:reveal', (_e, file) => { if (typeof file === 'string' && downloads.owns(file)) shell.showItemInFolder(file); });   // only files WishTube itself downloaded
   h('dl:open', (_e, file) => { if (typeof file === 'string' && downloads.owns(file) && fs.existsSync(file)) return shell.openPath(file); });
   h('open:external', (_e, url) => { if (/^https?:/.test(url)) shell.openExternal(url); });
-  h('win:fullscreen', (_e, on) => { win.setFullScreen(!!on); });
+  h('win:fullscreen', (_e, on) => { win?.setFullScreen(!!on); });
   h('update:state', () => updater.state());
   h('update:check', () => updater.check(true));
   h('update:install', async () => { try { return await updater.install(); } catch (e) { return { error: String(e.message || e) }; } });
@@ -120,24 +132,25 @@ app.whenReady().then(() => {
   h('update:auto', (_e, on) => { updater.setAuto(on); return true; });
   h('update:page', () => { const p = updater.info?.page; if (typeof p === 'string' && /^https:\/\/github\.com\//.test(p)) shell.openExternal(p); });
   h('app:relaunch', () => { app.relaunch(); quitting = true; app.quit(); });
-  h('win:alwaysOnTop', (_e, on) => { win.setAlwaysOnTop(!!on, 'floating'); return win.isAlwaysOnTop(); });
+  h('win:alwaysOnTop', (_e, on) => { if (!win) return false; win.setAlwaysOnTop(!!on, 'floating'); return win.isAlwaysOnTop(); });
   h('file:export', async (_e, name, text) => {
-    const r = await dialog.showSaveDialog(win, { defaultPath: name, filters: [{ name: 'JSON', extensions: ['json'] }] });
+    const r = await dialog.showSaveDialog(win || undefined, { defaultPath: name, filters: [{ name: 'JSON', extensions: ['json'] }] });
     if (r.canceled || !r.filePath) return false; fs.writeFileSync(r.filePath, text); return true;
   });
   h('file:import', async () => {
-    const r = await dialog.showOpenDialog(win, { properties: ['openFile'], filters: [{ name: 'JSON', extensions: ['json'] }] });
+    const r = await dialog.showOpenDialog(win || undefined, { properties: ['openFile'], filters: [{ name: 'JSON', extensions: ['json'] }] });
     return r.canceled || !r.filePaths[0] ? null : fs.readFileSync(r.filePaths[0], 'utf8');
   });
   h('dir:pick', async () => {
-    const r = await dialog.showOpenDialog(win, { properties: ['openDirectory', 'createDirectory'] });
+    const r = await dialog.showOpenDialog(win || undefined, { properties: ['openDirectory', 'createDirectory'] });
     return r.canceled ? null : r.filePaths[0];
   });
 
+  macMenu();
   createWindow();
   win.webContents.once('did-finish-load', () => updater.startDaily());
   try {
-    const img = nativeImage.createFromPath(path.join(__dirname, '../renderer/icon-512.png')).resize({ width: 22, height: 22 });
+    const img = nativeImage.createFromPath(path.join(__dirname, '../renderer/icon-512.png')).resize({ width: process.platform === 'darwin' ? 18 : 22, height: process.platform === 'darwin' ? 18 : 22 });
     tray = new Tray(img);
     tray.setToolTip('WishTube');
     tray.setContextMenu(Menu.buildFromTemplate([

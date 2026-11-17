@@ -14,3 +14,11 @@ test('asset picker chooses the right file per platform', () => {
   assert.equal(pickAsset(assets, 'linux').name, 'WishTube-0.3.0-linux-x86_64.AppImage');
   assert.equal(pickAsset(assets, 'darwin'), null); assert.equal(pickAsset([], 'linux'), null);
 });
+
+test('asset picker chooses the disk image that matches this Mac', () => {
+  const A = n => ({ name: n, browser_download_url: 'https://github.com/x/' + n });
+  const assets = [A('WishTube-0.3.1-mac-x64.dmg'), A('WishTube-0.3.1-mac-arm64.dmg'), A('WishTube-0.3.1-mac-arm64.dmg.blockmap'), A('WishTube-Setup-0.3.1.exe')];
+  assert.equal(pickAsset(assets, 'darwin', 'arm64').name, 'WishTube-0.3.1-mac-arm64.dmg');
+  assert.equal(pickAsset(assets, 'darwin', 'x64').name, 'WishTube-0.3.1-mac-x64.dmg');
+  assert.equal(pickAsset([A('WishTube-0.3.1-mac-arm64.zip')], 'darwin', 'x64').name, 'WishTube-0.3.1-mac-arm64.zip');   // a zip is better than nothing
+});

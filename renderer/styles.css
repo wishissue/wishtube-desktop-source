@@ -148,6 +148,19 @@ input[type=range] { accent-color: var(--accent); width: 200px; }
 .sentinel { height: 1px; }
 .no-motion *, .no-motion *::before, .no-motion *::after { animation-duration: .001ms !important; animation-delay: 0ms !important; transition-duration: .001ms !important; }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; } }
+/* Loading indicators are feedback, not decoration. The two kill-switches above (Settings > Animations > Off, and the OS "reduce motion"
+   preference that Windows, GNOME and KDE set when animations are disabled) squash every animation to .001ms, which froze the ring and made
+   the app look hung. Loaders keep turning here, in a calmer form: steady arc, no morphing. Specificity beats the blanket rules (html .x > .x *). */
+html.no-motion .wv .arc { animation: none !important; stroke-dasharray: .35 .65; stroke-dashoffset: 0; }
+html.no-motion .wv { animation: wvspin 2.2s linear infinite !important; }
+html.no-motion .spin { animation: wtspin 1.4s linear infinite !important; }
+html.no-motion .btn.loading::after { animation: wtspin 1.2s linear infinite !important; }
+@media (prefers-reduced-motion: reduce) {
+  html .wv .arc { animation: none !important; stroke-dasharray: .35 .65; stroke-dashoffset: 0; }
+  html .wv { animation: wvspin 2.2s linear infinite !important; }
+  html .spin { animation: wtspin 1.4s linear infinite !important; }
+  html .btn.loading::after { animation: wtspin 1.2s linear infinite !important; }
+}
 @media (max-width: 1150px) { .watch { grid-template-columns: 1fr; } .brand span { display: none; } .brand { min-width: 0; } }
 
 /* ---------- Pretend as Browser ---------- */
@@ -282,7 +295,7 @@ input[type=range]:disabled { opacity: .4; cursor: not-allowed; }
 .loader.big { padding: 36px 12px; } .loader.big .wv { width: 88px; height: 88px; }
 .lslow { display: flex; align-items: center; gap: 12px; max-width: 360px; padding: 8px 16px 8px 8px; text-align: left; font-size: 13.5px; line-height: 1.4; color: var(--text); background: var(--pop, var(--surface-2)); border: var(--pop-bd, 1px solid var(--line)); border-radius: var(--r); animation: catin .4s var(--ease) both; }
 .lslow img { width: 54px; height: 54px; flex: none; object-fit: cover; border-radius: var(--r-sm); }
-html.no-motion .wv, html.no-motion .wv .arc, html.calm .catpic { animation: none; } html.no-motion .wv .arc { stroke-dasharray: .35 .65; }
+html.calm .catpic { animation: none; }
 .loadbox { display: grid; justify-items: center; gap: 10px; padding: 34px 10px; text-align: center; } .loadbox .sub { max-width: 52ch; margin: 0; }
 .pload { position: absolute; inset: 0; display: grid; align-content: end; justify-items: center; padding: 0 16px 70px; pointer-events: none; z-index: 3; } .pload:empty { display: none; }
 .player > .pload { align-content: center; padding: 16px; }

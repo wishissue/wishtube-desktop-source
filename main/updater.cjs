@@ -17,10 +17,14 @@ function compareVersions(a, b) {
 }
 
 /** Choose the file that matches this computer from a release's assets. */
-function pickAsset(assets, platform = process.platform) {
+function pickAsset(assets, platform = process.platform, arch = process.arch) {
   const list = (assets || []).filter(a => a && a.name && a.browser_download_url);
   if (platform === 'linux') return list.find(a => /\.AppImage$/i.test(a.name)) || null;
   if (platform === 'win32') return list.find(a => /setup.*\.exe$/i.test(a.name)) || list.find(a => /\.exe$/i.test(a.name) && !/portable/i.test(a.name)) || list.find(a => /\.exe$/i.test(a.name)) || null;
+  if (platform === 'darwin') {   // prefer the disk image that matches this Mac's chip, then any dmg, then a zip
+    const want = arch === 'arm64' ? /arm64/i : /x64|x86_64|intel/i, mac = list.filter(a => /\.(dmg|zip)$/i.test(a.name) && !/blockmap/i.test(a.name));
+    return mac.find(a => /\.dmg$/i.test(a.name) && want.test(a.name)) || mac.find(a => /\.dmg$/i.test(a.name)) || mac.find(a => want.test(a.name)) || mac[0] || null;
+  }
   return null;
 }
 

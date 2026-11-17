@@ -73,7 +73,7 @@ export function lookPanels(themePick) {
       field('Sidebar side', null, seg('railSide', [['left', 'Left'], ['right', 'Right']])),
       h('div.field', h('details.grow', h('summary', 'Sidebar items'), h('div.row.wrap', { style: { marginTop: '10px', gap: '8px' } }, ...navItems.map(([id, l]) => h('button.chip', { class: S().nav[id] === false ? '' : 'on', onclick: e => { S().nav[id] = S().nav[id] === false; e.currentTarget.classList.toggle('on', S().nav[id] !== false); save(); } }, l)))))),
     h('div.panel', h('h2', 'Background'), bgBox),
-    h('div.panel', h('h2', 'Motion'), field('Animations', 'Full: everything moves. Reduced: no decorative motion. Off: instant.', seg('motionLevel', [['full', 'Full'], ['reduced', 'Reduced'], ['off', 'Off']]))),
+    h('div.panel', h('h2', 'Motion'), field('Animations', 'Full: everything moves. Reduced: no decorative motion. Off: instant (loading spinners still turn, so you can tell it is working).', seg('motionLevel', [['full', 'Full'], ['reduced', 'Reduced'], ['off', 'Off']]))),
   ];
 }
 

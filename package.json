@@ -1,8 +1,8 @@
 {
   "name": "wishtube-desktop",
   "productName": "WishTube",
-  "version": "0.3.0",
-  "description": "Local-first open video client for Linux and Windows",
+  "version": "0.3.1",
+  "description": "Local-first open video client for Linux, Windows and macOS",
   "author": "wishissue",
   "license": "Apache-2.0",
   "type": "module",
@@ -13,7 +13,9 @@
     "vendor": "node scripts/vendor.mjs",
     "dist:linux": "npm run vendor && electron-builder --linux AppImage",
     "dist:win": "npm run vendor && electron-builder --win portable nsis",
-    "dist": "npm run vendor && electron-builder --linux AppImage --win portable nsis"
+    "dist:mac": "npm run vendor && electron-builder --mac dmg zip --x64 --arm64",
+    "dist:mac:zip": "npm run vendor && electron-builder --mac zip --x64 --arm64",
+    "dist": "npm run vendor && electron-builder --linux AppImage --win portable nsis --mac zip --x64 --arm64"
   },
   "dependencies": {
     "ffmpeg-static": "5.2.0",
@@ -34,11 +36,7 @@
     "files": [
       "main/**",
       "renderer/**",
-      "package.json",
-      "!node_modules/ffprobe-static/bin/darwin/**",
-      "!node_modules/ffprobe-static/bin/linux/ia32/**",
-      "!node_modules/ffprobe-static/bin/linux/arm*/**",
-      "!node_modules/ffprobe-static/bin/win32/ia32/**"
+      "package.json"
     ],
     "asar": true,
     "linux": {
@@ -47,7 +45,12 @@
       ],
       "category": "AudioVideo",
       "icon": "build/icon.png",
-      "artifactName": "WishTube-${version}-linux-x86_64.AppImage"
+      "artifactName": "WishTube-${version}-linux-x86_64.AppImage",
+      "files": [
+        "!node_modules/ffprobe-static/bin/darwin/**",
+        "!node_modules/ffprobe-static/bin/win32/**",
+        "!node_modules/ffprobe-static/bin/linux/ia32/**"
+      ]
     },
     "win": {
       "target": [
@@ -56,7 +59,12 @@
       ],
       "icon": "build/icon.png",
       "signAndEditExecutable": false,
-      "artifactName": "WishTube-${version}-win-x64.${ext}"
+      "artifactName": "WishTube-${version}-win-x64.${ext}",
+      "files": [
+        "!node_modules/ffprobe-static/bin/darwin/**",
+        "!node_modules/ffprobe-static/bin/linux/**",
+        "!node_modules/ffprobe-static/bin/win32/ia32/**"
+      ]
     },
     "nsis": {
       "oneClick": false,
@@ -70,6 +78,39 @@
     ],
     "portable": {
       "artifactName": "WishTube-${version}-portable.${ext}"
+    },
+    "beforePack": "scripts/before-pack.cjs",
+    "afterPack": "scripts/after-pack.cjs",
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "category": "public.app-category.video",
+      "icon": "build/icon.png",
+      "identity": null,
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false,
+      "artifactName": "WishTube-${version}-mac-${arch}.${ext}",
+      "files": [
+        "!node_modules/ffprobe-static/bin/linux/**",
+        "!node_modules/ffprobe-static/bin/win32/**"
+      ]
+    },
+    "dmg": {
+      "artifactName": "WishTube-${version}-mac-${arch}.${ext}"
     }
   },
   "repository": {
