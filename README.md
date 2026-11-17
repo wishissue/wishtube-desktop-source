@@ -44,3 +44,9 @@ Downloads use the FFmpeg binaries from `ffmpeg-static` / `ffprobe-static`; if th
 - **Loading**: the terminal-style activity logs, the status pill and the "show what this player is doing" button are gone. Every wait now shows one animated logo ring with a single plain sentence.
 - **Liquid Glass removed** (theme, settings panel, see-through window code). Saved settings that used it switch to OLED Black.
 - **Music and Shorts picking**: popular, good-quality items lead (about 7 in 10 slots); the other 3 in 10 are decent but less-known picks for discovery. Music weighs views, track-like length (about 1.5 to 8 min) and song-like titles, and pushes podcasts, hour-long mixes and clips to the bottom. The order is reshuffled every session, and on the new **Shuffle** button in Music.
+
+## Loading and error screens
+
+- **Loading** is a Material-style wavy circular indicator in your theme's accent colour, with one plain sentence. The app icon is never shown while loading, including on the splash screen.
+- **Failures and empty states** show a cat on the left and the explanation on the right, with a joke that changes. The card only uses theme colours, and body text stays above 11:1 contrast in all themes.
+- Add your own cats and jokes in `renderer/assets/cats/README.md`.

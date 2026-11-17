@@ -58,7 +58,7 @@ export function settings(root) {
 
     h('div.panel', h('h2', 'Data'),
       h('div.row.wrap', h('button.btn', { onclick: async () => { if (await window.wt.exportFile('wishtube-profile.json', state.exportProfile())) toast('Exported'); } }, 'Export'),
-        h('button.btn', { onclick: async () => { const t = await window.wt.importFile(); if (!t) return; try { await state.importProfile(t); toast('Imported'); setTimeout(() => location.reload(), 600); } catch (e) { toast('Import failed: ' + e.message); } } }, 'Import'),
+        h('button.btn', { onclick: async () => { const t = await window.wt.importFile(); if (!t) return; try { await state.importProfile(t); toast('Imported', 2600, 'win'); setTimeout(() => location.reload(), 600); } catch (e) { toast('Import failed: ' + e.message); } } }, 'Import'),
         h('button.btn', { onclick: async () => { pool.t = 0; pool.videos = []; window.wt.set('pool', null); toast('Cache cleared'); } }, 'Clear feed cache')),
       h('p.sub', { style: { marginTop: '12px' } }, 'Everything stays on this computer. No account, no analytics.')),
 

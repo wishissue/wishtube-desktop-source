@@ -1,4 +1,6 @@
 import { h, clear, toast, $ } from './dom.js';
+import { wavy } from './wavy.js';
+import { catPanel } from './cats.js';
 import { icon } from './icons.js';
 
 /**
@@ -24,8 +26,8 @@ export function browserPlayer(host, video, { onBack }) {
     reload.replaceChildren(icon(st.loading ? 'x' : 'refresh', 18)); reload.title = st.loading ? 'Stop' : 'Reload';
     full.replaceChildren(icon(st.fs ? 'exitfull' : 'full', 18));
     msg.hidden = !st.error && !st.loading; clear(msg);
-    if (st.error) msg.append(h('p', st.error), h('div.row', { style: { justifyContent: 'center' } }, h('button.btn.sm.pri', { onclick: () => window.wt.browser.nav('reload') }, 'Reload'), h('button.btn.sm', { onclick: () => window.wt.openExternal(video.url) }, icon('ext', 15), 'Open original')));
-    else if (st.loading) msg.append(h('div.spin'));
+    if (st.error) msg.append(catPanel('pagefail', { size: 'sm', title: 'This page didn’t load', text: st.error, actions: [h('button.btn.sm.pri', { onclick: () => window.wt.browser.nav('reload') }, 'Reload'), h('button.btn.sm', { onclick: () => window.wt.openExternal(video.url) }, icon('ext', 15), 'Open original')] }));
+    else if (st.loading) msg.append(wavy(40, 'on-dark'));
   }
   const off = window.wt.on('browser:state', s => { st = s; draw(); });
 

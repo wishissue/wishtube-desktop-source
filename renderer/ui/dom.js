@@ -1,3 +1,4 @@
+import { pickCat, catSrc } from '../core/cats.js';
 /** Tiny hyperscript helper. Text is always inserted as text nodes, never as HTML. */
 export function h(tag, props, ...kids) {
   const [t, ...cls] = tag.split('.'), el = document.createElement(t || 'div');
@@ -29,8 +30,10 @@ export function fmtAgo(t) {
 }
 export const fmtBytes = b => b > 1e9 ? (b / 1e9).toFixed(2) + ' GB' : b > 1e6 ? (b / 1e6).toFixed(1) + ' MB' : Math.round(b / 1e3) + ' KB';
 
-export function toast(msg, ms = 2600) {
-  const t = h('div.toast', msg); document.getElementById('toasts').append(t);
+/** @param {string} [cat] optional cat kind from core/cats.js: shows a small cat at the left of the toast */
+export function toast(msg, ms = 2600, cat) {
+  const c = cat ? pickCat(cat).cat : null;
+  const t = h('div.toast' + (c ? '.hascat' : ''), c ? h('img.tcat', { src: catSrc(c), alt: '', style: { objectPosition: c.pos || '50% 50%' } }) : null, h('span', msg)); document.getElementById('toasts').append(t);
   requestAnimationFrame(() => t.classList.add('in'));
   setTimeout(() => { t.classList.remove('in'); setTimeout(() => t.remove(), 300); }, ms);
 }

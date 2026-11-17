@@ -1,4 +1,5 @@
 import { h, fmtDur, toast } from './dom.js';
+import { catPanel } from './cats.js';
 import { icon } from './icons.js';
 import { trace } from '../core/trace.js';
 import { net, friendly } from '../core/net.js';
@@ -85,10 +86,10 @@ export class Player {
   fail() {
     clearTimeout(this.wd); this.failedAll = true; this.T.err('Every available stream failed');
     this.term?.stop(); this.term = null; this.pload.replaceChildren();
-    this.err = h('div.perr', h('div', h('h2', 'This video couldn’t be played'), h('p.sub', 'The source may be down, private, or not available in your country.')),
-      h('div.row', { style: { justifyContent: 'center', flexWrap: 'wrap' } }, h('button.btn.pri', { onclick: () => { this.err.remove(); this.err = null; this.failedAll = false; this.lazyTried = false; this.t0 = Date.now(); this.T.info('Trying again from the first stream'); this.load(0); } }, 'Try Again'),
-        h('button.btn', { onclick: () => window.wt.openExternal(this.v.url) }, icon('ext', 16), 'Open Original'),
-        this.onBrowser ? h('button.btn', { onclick: () => this.onBrowser() }, icon('compass', 16), 'Pretend as Browser') : null));
+    this.err = h('div.perr', catPanel('streams', { size: 'sm', title: 'This video couldn’t be played', text: 'The source may be down, private, or not available in your country.', actions: [
+      h('button.btn.pri', { onclick: () => { this.err.remove(); this.err = null; this.failedAll = false; this.lazyTried = false; this.t0 = Date.now(); this.T.info('Trying again from the first stream'); this.load(0); } }, 'Try Again'),
+      h('button.btn', { onclick: () => window.wt.openExternal(this.v.url) }, icon('ext', 16), 'Open Original'),
+      this.onBrowser ? h('button.btn', { onclick: () => this.onBrowser() }, icon('compass', 16), 'Pretend as Browser') : null] }));
     this.el.append(this.err);
   }
   destroyHls() { this.hls?.destroy(); this.hls = null; }

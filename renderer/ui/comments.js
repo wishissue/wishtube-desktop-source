@@ -1,4 +1,5 @@
 import { h, clear, fmtAgo } from './dom.js';
+import { catPanel } from './cats.js';
 import { icon } from './icons.js';
 import { sources } from '../sources/manager.js';
 import { avatar } from './components.js';
@@ -30,7 +31,7 @@ export function commentsPanel(v) {
       h('button.btn.sm', { title: collapsed ? 'Expand all' : 'Collapse all', onclick: () => { collapsed = !collapsed; if (collapsed) expanded.clear(); draw(); } }, icon(collapsed ? 'down' : 'up', 15), collapsed ? 'Expand' : 'Collapse'),
       h('button.btn.sm', { onclick: () => window.wt.openExternal(v.url) }, icon('ext', 15), 'Open discussion'));
     clear(list);
-    if (err) return list.append(h('div.sub.cerr', err, ' ', h('button.link', { onclick: () => load(true) }, 'Retry')));
+    if (err) return list.append(catPanel('comments', { size: 'sm', title: 'Couldn’t load comments', text: err, actions: [h('button.btn.sm.pri', { onclick: () => load(true) }, 'Retry')] }));
     if (!all.length) return list.append(h('p.sub', 'No comments yet.'));
     if (collapsed) return list.append(h('p.sub', `${all.length} comments hidden.`));
     if (sort === 'top' && !topMeaningful(all)) list.append(h('p.sub', 'This provider doesn’t report likes, so “Top” keeps the newest first.'));

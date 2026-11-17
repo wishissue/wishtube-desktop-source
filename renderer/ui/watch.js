@@ -1,4 +1,5 @@
 import { h, clear, toast, linkify, fmtDur, fmtViews, fmtAgo } from './dom.js';
+import { catPanel } from './cats.js';
 import { icon } from './icons.js';
 import { state } from '../core/state.js';
 import { pool } from '../rec/pool.js';
@@ -18,7 +19,7 @@ const prefs = { volume: null };
 
 export async function watch(root, { id }) {
   let alive = true, player = null, bp = null, related = [], v = state.known.get(id);
-  if (!v) { root.append(h('div.page', h('div.empty', h('h2', 'Video not found'), h('p', 'It may have expired from the cache. Search for it again.'), h('button.btn.pri', { onclick: () => go('/') }, 'Back home')))); return () => {}; }
+  if (!v) { root.append(h('div.page', catPanel('notfound', { title: 'Video not found', text: 'It may have expired from the cache. Search for it again.', actions: [h('button.btn.pri', { onclick: () => go('/') }, 'Back home')] }))); return () => {}; }
 
   const side = h('div.side'), player$ = h('div'), info = h('div'), page = h('div.watch', h('div', player$, info), side);
   root.append(page);
@@ -47,7 +48,7 @@ export async function watch(root, { id }) {
   let stream, desc = v.desc || '', chapters = [];
   try { stream = await sources.stream(v, { scope }); lookup.stop(); } catch (e) {
     lookup.stop(); if (!alive) return () => {};
-    clear(player$).append(h('div.player', h('div.perr', h('div', h('h2', 'Couldn’t load this video'), h('p.sub', friendly(e))), h('div.row', { style: { justifyContent: 'center', flexWrap: 'wrap' } }, h('button.btn.pri', { onclick: () => { location.reload(); } }, 'Try Again'), h('button.btn', { onclick: () => window.wt.openExternal(v.url) }, icon('ext', 16), 'Open Original'), h('button.btn', { onclick: openBrowser }, icon('compass', 16), 'Pretend as Browser')))));
+    clear(player$).append(h('div.player', h('div.perr', catPanel('loadfail', { size: 'sm', title: 'Couldn’t load this video', text: friendly(e), actions: [h('button.btn.pri', { onclick: () => { location.reload(); } }, 'Try Again'), h('button.btn', { onclick: () => window.wt.openExternal(v.url) }, icon('ext', 16), 'Open Original'), h('button.btn', { onclick: openBrowser }, icon('compass', 16), 'Pretend as Browser')] }))));
     renderInfo(null); return () => { alive = false; bp?.destroy(); };
   }
   if (!alive) { return () => {}; }

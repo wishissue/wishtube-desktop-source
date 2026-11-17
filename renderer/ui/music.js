@@ -1,4 +1,5 @@
 import { h, clear, toast, fmtDur } from './dom.js';
+import { catPanel } from './cats.js';
 import { icon } from './icons.js';
 import { state } from '../core/state.js';
 import { audio } from '../core/audio.js';
@@ -50,7 +51,7 @@ export function music(root) {
       }, { sort });
       if (!alive || my !== seq) return;
       if (items.length === start) done = true;
-    } catch (e) { toast('Music failed to load: ' + friendly(e)); }
+    } catch (e) { toast('Music failed to load: ' + friendly(e), 4000, 'loadfail'); }
     if (my !== seq) return;
     busy = false; stopTerm(); draw();
   }
@@ -61,7 +62,7 @@ export function music(root) {
     clear(body); clear(more);
     const tracks = items.filter(v => !isAlbum(v)), albums = items.filter(isAlbum);
     if (busy && !items.length) return body.append(h('div.loadbox', term ? term.el : null));
-    if (!items.length) return body.append(h('div.empty', h('h2', q ? 'No music found' : 'No music loaded'), h('p', q ? 'Try different words. Music comes from PeerTube’s Music category, Odysee music tags and Internet Archive audio, and only from sources you have switched on.' : 'Check your connection or the sources in Settings.'), h('button.btn.pri', { onclick: () => load(true) }, 'Retry')), h('div.loadbox', staticLog({ scopes: ['music'], title: 'What happened' })));
+    if (!items.length) return body.append(catPanel('nomedia', { title: q ? 'No music found' : 'No music loaded', text: q ? 'Try different words. Music comes from PeerTube’s Music category, Odysee music tags and Internet Archive audio, and only from sources you have switched on.' : 'Check your connection or the sources in Settings.', actions: [h('button.btn.pri', { onclick: () => load(true) }, 'Retry')] }));
     if (tab === 'discover') {
       body.append(h('div.row', { style: { marginBottom: '10px', gap: '8px' } }, h('button.btn.pri', { onclick: () => audio.playList(tracks) , disabled: !tracks.length }, icon('play', 15), 'Play all'),
         h('button.btn', { disabled: !tracks.length, onclick: () => { audio.q.setShuffle(true); audio.playList(tracks, Math.floor(Math.random() * tracks.length)); } }, icon('shuffle', 15), 'Shuffle'), h('button.btn', { disabled: !tracks.length, onclick: () => { audio.addMany(tracks); toast('Added ' + tracks.length + ' to queue'); } }, icon('queue', 15), 'Queue all')));
@@ -69,7 +70,7 @@ export function music(root) {
       if (!tracks.length) body.append(h('p.sub', 'Only releases were found. See “Albums & releases”.'));
     } else if (tab === 'albums') {
       body.append(albums.length ? h('div.grid.plgrid', ...albums.map((v, i) => h('a.card', { href: '#' + albumPath(v), style: { '--i': Math.min(i, 14) } },
-        h('div.thumb', v.thumb ? h('img.ld', { src: v.thumb, alt: '', loading: 'lazy' }) : h('div.plempty', icon('disc', 40)), h('span.tag.dur', 'Release')), h('div.meta', h('div.grow', h('div.title', v.title), h('div.sub', v.creator)))))) : h('div.empty', h('p', 'No releases in these results. Releases come from Internet Archive audio, which is the one source here that exposes real tracklists.')));
+        h('div.thumb', v.thumb ? h('img.ld', { src: v.thumb, alt: '', loading: 'lazy' }) : h('div.plempty', icon('disc', 40)), h('span.tag.dur', 'Release')), h('div.meta', h('div.grow', h('div.title', v.title), h('div.sub', v.creator)))))) : catPanel('nomedia', { size: 'sm', title: 'No releases in these results', text: 'Releases come from Internet Archive audio, which is the one source here that exposes real tracklists.' }));
     } else {
       const by = new Map(); for (const v of items) { const k = v.source + ':' + v.creatorId; (by.get(k) || by.set(k, { v, n: 0 }).get(k)).n++; }
       const arts = [...by.values()].sort((a, b) => b.n - a.n).slice(0, 60);
@@ -87,7 +88,7 @@ export function music(root) {
 export function album(root, { id }) {
   const v = state.known.get(id), body = h('div'); let alive = true;
   root.append(h('div.page', { style: { maxWidth: '980px' } }, h('a.sub', { href: '#/music', style: { display: 'inline-flex', gap: '4px', alignItems: 'center', marginBottom: '10px' } }, icon('back', 14), 'Music'), body));
-  if (!v) { body.append(h('div.empty', h('h2', 'Album not found'), h('p', 'Open it from Music again.'))); return; }
+  if (!v) { body.append(catPanel('notfound', { title: 'Album not found', text: 'Open it from Music again.' })); return; }
   body.append(skeletons(3));
   sources.stream(v).then(st => {
     if (!alive) return; const tracks = (st.tracks || []).map((t, i) => ({ id: `${v.id}#${i}`, source: v.source, sid: v.sid, title: t.title, creator: t.artist || v.creator, creatorId: v.creatorId, thumb: v.thumb, dur: t.dur, url: v.url, directUrl: t.url, album: v.title, albumId: v.id, audio: true, music: true }));
@@ -99,6 +100,6 @@ export function album(root, { id }) {
           h('button.btn', { onclick: () => { audio.addMany(tracks); toast('Album added to queue'); } }, icon('queue', 15), 'Add to queue'), h('button.btn', { onclick: () => addToPlaylistDialog(v) }, icon('listplus', 15), 'Playlist'), h('button.btn', { onclick: () => window.wt.openExternal(v.url) }, icon('ext', 15), 'Original')))),
       h('div.tlist', ...tracks.map((t, i) => h('div.trow', { ondblclick: () => audio.playList(tracks, i) }, h('span.sub.mono', { style: { width: '26px', textAlign: 'right' } }, i + 1), h('button.iconbtn', { title: 'Play', 'aria-label': 'Play ' + t.title, onclick: () => audio.playList(tracks, i) }, icon('play', 17)),
         h('div.grow.tmeta', h('div.title', t.title), t.creator !== v.creator ? h('div.sub', t.creator) : null), t.dur ? h('span.sub.mono', fmtDur(t.dur)) : null, h('button.iconbtn', { title: 'Add to queue', 'aria-label': 'Add to queue', onclick: () => { audio.add(t); toast('Added to queue'); } }, icon('queue', 17))))));
-  }).catch(e => clear(body).append(h('div.empty', h('h2', 'Couldn’t load this release'), h('p', e.message))));
+  }).catch(e => clear(body).append(catPanel('pagefail', { title: 'Couldn’t load this release', text: e.message })));
   return () => { alive = false; };
 }

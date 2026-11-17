@@ -119,7 +119,7 @@ window.addEventListener('unhandledrejection', e => console.warn('unhandled', e.r
   await state.load(); await pool.load(); audio.restore(await window.wt.get('queue', null)); mountMiniPlayer();
   window.wt.on('open-url', async url => { const v = await sources.resolveUrl(url); if (v) go(`/watch/${encodeURIComponent(v.id)}`); });
   window.wt.on('fullscreen', () => {});
-  const dlBadge = window.wt.on('dl:update', d => { if (d.state === 'done') import('./ui/dom.js').then(m => m.toast('Download finished: ' + d.title.slice(0, 40))); });
+  const dlBadge = window.wt.on('dl:update', d => { if (d.state === 'done') import('./ui/dom.js').then(m => m.toast('Download finished: ' + d.title.slice(0, 40), 3600, 'win')); });
   shell(); initUpdates(); await route();
   const sp = document.getElementById('splash'); if (sp) { sp.classList.add('out'); setTimeout(() => sp.remove(), 600); }
   if (!state.settings.onboarded) onboarding(() => route());

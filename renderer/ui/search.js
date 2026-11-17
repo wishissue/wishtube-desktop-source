@@ -1,4 +1,6 @@
 import { h, clear } from './dom.js';
+import { wavy } from './wavy.js';
+import { catPanel } from './cats.js';
 import { icon } from './icons.js';
 import { state } from '../core/state.js';
 import { sources } from '../sources/manager.js';
@@ -13,10 +15,10 @@ export async function search(root, { q }) {
   const bySrc = {}, grid = h('div.grid'), chips = h('div.chips'), status = h('div.sub'), more = h('div', { style: { textAlign: 'center', margin: '30px 0' } });
 
   if (/^https?:\/\//i.test(q)) {                                          // a pasted link opens directly
-    root.append(h('div.page', h('div.empty', h('h2', 'Opening link…'))));
+    root.append(h('div.page', h('div.loader.big', wavy(72), h('span.ltext', 'Opening link…'))));
     const v = await sources.resolveUrl(q);
     if (v && alive) { location.replace('#' + watchPath(v)); return () => { alive = false; }; }
-    clear(root).append(h('div.page', h('div.empty', h('h2', 'Couldn’t open that link'), h('p', 'None of your enabled sources recognise it.'))));
+    clear(root).append(h('div.page', catPanel('badlink', { title: 'Couldn’t open that link', text: 'None of your enabled sources recognise it.' })));
     return () => { alive = false; };
   }
 
@@ -34,7 +36,7 @@ export async function search(root, { q }) {
     clear(grid); shown.forEach((v, i) => grid.append(card(v, Math.min(i, 14), { onHide: view })));
     drawChips();
     status.textContent = loading ? 'Searching…' : results.length ? (shown.length === results.length ? `${results.length} results` : `${shown.length} of ${results.length} results`) : '';
-    if (!loading && results.length && !shown.length) grid.append(h('div.empty', { style: { gridColumn: '1/-1' } }, h('p', 'Nothing matches these filters. Loaded results that don’t report a duration are excluded when a duration is chosen.')));
+    if (!loading && results.length && !shown.length) grid.append(catPanel('noresults', { style: { gridColumn: '1/-1' }, title: 'Nothing matches these filters', text: 'Loaded results that don’t report a duration are excluded when a duration is chosen.' }));
     clear(more); if (!loading && results.length) more.append(h('button.btn', { onclick: () => run(page + 1) }, 'Load more'));
   }
   function drawChips() {
@@ -47,7 +49,7 @@ export async function search(root, { q }) {
     const errs = []; const off = state.bus.on('source-error', e => errs.push(e));
     await sources.search(q, p, sort, (id, l) => { if (!alive) return; bySrc[id] = [...(bySrc[id] || []), ...l]; if (p === 0 && grid.querySelector('.loadbox')) { term?.stop(); term = null; clear(grid); } view(); });
     off(); loading = false; term?.stop(); term = null; if (!alive) return; view();
-    if (!results.length) clear(grid).append(h('div.empty', { style: { gridColumn: '1/-1' } }, h('h2', `No results for “${q}”`), h('p', errs.length ? `${errs.length} source(s) didn’t respond. Check your connection.` : 'Try different words or enable more sources.')));
+    if (!results.length) clear(grid).append(catPanel(errs.length ? 'source' : 'noresults', { style: { gridColumn: '1/-1' }, title: `No results for “${q}”`, text: errs.length ? `${errs.length} source(s) didn’t respond. Check your connection.` : 'Try different words or enable more sources.' }));
   }
   root.append(h('div.page',
     h('div.row.wrap', { style: { marginBottom: '16px' } }, h('h1', `Results for “${q}”`), status, h('div.grow'),

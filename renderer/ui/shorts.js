@@ -1,4 +1,5 @@
 import { h, clear, toast } from './dom.js';
+import { catPanel } from './cats.js';
 import { icon } from './icons.js';
 import { state } from '../core/state.js';
 import { pool } from '../rec/pool.js';
@@ -156,7 +157,7 @@ export function shorts(root) {
   }
   const failed = why => {
     hideTerm(); fails++;
-    if (fails >= 6) { toast('Several Shorts in a row failed. Check your connection or try again.'); return; }
+    if (fails >= 6) { toast('Several Shorts in a row failed. Check your connection or try again.', 4200, 'streams'); return; }
     toast('Skipping this Short' + (why ? ' — ' + why : '') + '.'); const my = token; setTimeout(() => alive && my === token && show(i + 1, 1), 500);
   };
   function leave() {                                                   // record what was watched
@@ -209,7 +210,7 @@ export function shorts(root) {
   fetchMore().then(() => {
     loadTerm?.stop(); loadTerm = null; stage.querySelector('.sload.first')?.remove();
     if (!alive || list.length) return;
-    root.firstChild.replaceChildren(h('div.empty', h('h2', 'No Shorts found'), h('p', 'WishTube only calls something a Short when the provider says so (a “shorts” tag, or portrait video the provider reports). Nothing qualified in your enabled sources right now.'), h('div.row', { style: { justifyContent: 'center', gap: '8px' } }, h('button.btn.pri', { onclick: () => dispatchEvent(new HashChangeEvent('hashchange')) }, 'Try again'), h('a.btn', { href: '#/settings' }, 'Sources')), h('div.loadbox', staticLog({ scopes: ['shorts'], since: t0 - 500, title: 'What happened' }))));
+    root.firstChild.replaceChildren(catPanel('nomedia', { title: 'No Shorts found', text: 'WishTube only calls something a Short when the provider says so (a “shorts” tag, or portrait video the provider reports). Nothing qualified in your enabled sources right now.', actions: [h('button.btn.pri', { onclick: () => dispatchEvent(new HashChangeEvent('hashchange')) }, 'Try again'), h('a.btn', { href: '#/settings' }, 'Sources')] }));
   });
   // the first Short appears as soon as ANY source answers (see kick()); drop the finder log at that moment
   const offFirst = trace.on(() => { if (i >= 0 && loadTerm) { loadTerm.stop(); loadTerm = null; stage.querySelector('.sload.first')?.remove(); } });

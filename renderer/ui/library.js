@@ -1,4 +1,5 @@
 import { h, clear, toast, fmtAgo, fmtDur } from './dom.js';
+import { catPanel } from './cats.js';
 import { icon } from './icons.js';
 import { state } from '../core/state.js';
 import { pool } from '../rec/pool.js';
@@ -16,7 +17,7 @@ export function library(root, { tab = 'history' }) {
     clear(tabs).append(...TABS.map(([k, l]) => h('button.chip', { class: k === tab ? 'on' : '', onclick: () => go('/library/' + k) }, l, items(k).length ? h('span', { style: { opacity: .6 } }, items(k).length) : null)));
     clear(body); const list = items(tab);
     if (tab === 'playlists') return playlistsTab(body, draw);
-    if (!list.length) return body.append(h('div.empty', h('h2', 'Nothing here yet'), h('p', tab === 'history' ? 'Videos you watch show up here.' : 'Use the buttons on any video to fill this up.')));
+    if (!list.length) return body.append(catPanel('emptylib', { title: 'Nothing here yet', text: tab === 'history' ? 'Videos you watch show up here.' : 'Use the buttons on any video to fill this up.' }));
     if (tab === 'history') {
       body.append(h('div.row', { style: { marginBottom: '12px' } }, h('div.grow'), h('button.btn.sm.danger', { onclick: () => { if (confirm('Clear your watch history? Your recommendations keep what they learned.')) { state.lib.history = []; state.saveLib(); draw(); } } }, icon('trash', 15), 'Clear history')));
       body.append(h('div.list', ...state.lib.history.map((e, i) => h('a.item', { href: '#' + watchPath(e.video), style: { animationDelay: Math.min(i, 12) * 25 + 'ms' } }, h('div', { style: { width: '160px', flex: 'none' } }, thumb(e.video)),
@@ -24,7 +25,7 @@ export function library(root, { tab = 'history' }) {
         h('button.iconbtn', { title: 'Remove', onclick: ev => { ev.preventDefault(); state.lib.history.splice(i, 1); state.saveLib(); draw(); } }, icon('x', 16))))));
     } else {
       const grid = h('div.grid'), find = h('input.input', { placeholder: 'Filter this list…', 'aria-label': 'Filter this list', style: { maxWidth: '320px', marginBottom: '14px' } });
-      const paint = () => { const q = find.value.trim().toLowerCase(), f = q ? list.filter(v => (v.title + ' ' + v.creator).toLowerCase().includes(q)) : list; clear(grid).append(...(f.length ? f.map((v, i) => card(v, Math.min(i, 14), { onHide: draw })) : [h('div.empty', h('p', 'No matches'))])); };
+      const paint = () => { const q = find.value.trim().toLowerCase(), f = q ? list.filter(v => (v.title + ' ' + v.creator).toLowerCase().includes(q)) : list; clear(grid).append(...(f.length ? f.map((v, i) => card(v, Math.min(i, 14), { onHide: draw })) : [catPanel('noresults', { size: 'sm', title: 'No matches', text: 'Nothing in this list matches your search.' })])); };
       find.addEventListener('input', paint); paint(); body.append(find, grid);
     }
   }
@@ -36,12 +37,12 @@ export function following(root) {
   const fl = Object.entries(state.lib.follows), feed = h('div'); let alive = true;
   root.append(h('div.page', h('h1', { style: { marginBottom: '16px' } }, 'Following'),
     fl.length ? h('div.row.wrap', { style: { marginBottom: '26px', gap: '18px' } }, ...fl.map(([k, f]) => h('a', { href: `#/creator/${f.source}/${encodeURIComponent(f.creatorId)}`, style: { textAlign: 'center', width: '84px' } }, avatar(f.name, f.avatar, 56), h('div.sub', { style: { marginTop: '6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, f.name)))) : null, feed));
-  if (!fl.length) { feed.append(h('div.empty', h('h2', 'You’re not following anyone yet'), h('p', 'Hit Follow on any video. Their new uploads will appear here.'))); return () => {}; }
+  if (!fl.length) { feed.append(catPanel('nofollow', { title: 'You’re not following anyone yet', text: 'Hit Follow on any video. Their new uploads will appear here.' })); return () => {}; }
   feed.append(skeletons(6));
   Promise.all(fl.map(([k, f]) => sources.creatorVideos(f.source, f.creatorId, 0).catch(() => []))).then(r => {
     if (!alive) return;
     const vids = r.flat().filter(v => !state.hidden().videos.has(v.id)).sort((a, b) => b.date - a.date);
-    clear(feed).append(vids.length ? h('div.grid', ...vids.map((v, i) => card(v, Math.min(i, 14)))) : h('div.empty', h('h2', 'No uploads found'), h('p', 'Those channels have nothing new, or their sources are unreachable.')));
+    clear(feed).append(vids.length ? h('div.grid', ...vids.map((v, i) => card(v, Math.min(i, 14)))) : catPanel('nothing', { title: 'No uploads found', text: 'Those channels have nothing new, or their sources are unreachable.' }));
   });
   return () => { alive = false; };
 }
@@ -56,8 +57,8 @@ export async function creator(root, { src, cid }) {
   const upd = () => { const on = state.isFollowing(probe); folB.className = 'btn' + (on ? ' on' : ' pri'); folB.lastChild.textContent = on ? 'Following' : 'Follow'; }; upd();
   head.append(h('div.row', { style: { gap: '20px', marginBottom: '26px' } }, avatar(info.name, info.avatar, 80), h('div.grow', h('h1', info.name), h('div.sub', [SOURCES[src].label, info.followers != null ? `${info.followers.toLocaleString()} followers` : null].filter(Boolean).join(' · ')), info.desc ? h('p.sub', { style: { marginTop: '6px', maxWidth: '640px' } }, info.desc.slice(0, 280)) : null), folB, info.url ? h('button.iconbtn', { title: 'Open page', onclick: () => window.wt.openExternal(info.url) }, icon('ext', 18)) : null));
   async function load() {
-    try { const l = await sources.creatorVideos(src, cid, page); if (!alive) return; if (!page) clear(grid); l.forEach((v, i) => grid.append(card(v, i))); clear(more); if (l.length >= 15) more.append(h('button.btn', { onclick: () => { page++; load(); } }, 'Load more')); if (!page && !l.length) clear(grid).append(h('div.empty', 'No videos found.')); }
-    catch (e) { clear(grid).append(h('div.empty', h('h2', 'Couldn’t load videos'), h('p', e.message))); }
+    try { const l = await sources.creatorVideos(src, cid, page); if (!alive) return; if (!page) clear(grid); l.forEach((v, i) => grid.append(card(v, i))); clear(more); if (l.length >= 15) more.append(h('button.btn', { onclick: () => { page++; load(); } }, 'Load more')); if (!page && !l.length) clear(grid).append(catPanel('nothing', { title: 'No videos found', text: 'This creator has nothing we can show right now.' })); }
+    catch (e) { clear(grid).append(catPanel('source', { title: 'Couldn’t load videos', text: e.message })); }
   }
   load();
   return () => { alive = false; };

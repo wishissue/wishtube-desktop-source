@@ -1,4 +1,5 @@
 import { h, clear, toast, fmtDur } from './dom.js';
+import { catPanel } from './cats.js';
 import { icon } from './icons.js';
 import { state } from '../core/state.js';
 import { audio } from '../core/audio.js';
@@ -34,7 +35,7 @@ export function playlistsTab(body, redraw) {
   const make = () => { if (nameIn.value.trim()) { state.createPlaylist(nameIn.value); redraw(); } else nameIn.focus(); };
   nameIn.addEventListener('keydown', e => { if (e.key === 'Enter') make(); });
   body.append(h('div.row.wrap', { style: { marginBottom: '16px' } }, nameIn, h('button.btn.pri', { onclick: make }, icon('plus', 15), 'New playlist')));
-  if (!pls.length) return body.append(h('div.empty', h('h2', 'No playlists yet'), h('p', 'Create one here, or use “Add to playlist” on any video or track.')));
+  if (!pls.length) return body.append(catPanel('emptylist', { title: 'No playlists yet', text: 'Create one here, or use “Add to playlist” on any video or track.' }));
   body.append(h('div.grid.plgrid', ...pls.map(p => h('a.card.pl', { href: '#/playlist/' + p.id },
     h('div.thumb', p.items[0]?.thumb ? h('img.ld', { src: p.items[0].thumb, alt: '' }) : h('div.plempty', icon('queue', 34)), h('span.tag.dur', p.items.length + ' item' + (p.items.length === 1 ? '' : 's'))),
     h('div.meta', h('div.grow', h('div.title', p.name), h('div.sub', p.items.length ? p.items.slice(0, 2).map(x => x.title).join(' · ') : 'Empty')))))));
@@ -44,7 +45,7 @@ export function playlistPage(root, { id }) {
   const body = h('div'); let dragFrom = -1;
   const draw = () => {
     const p = state.lib.playlists[id]; clear(body);
-    if (!p) return body.append(h('div.empty', h('h2', 'Playlist not found'), h('a.btn', { href: '#/library/playlists' }, 'Back to playlists')));
+    if (!p) return body.append(catPanel('notfound', { title: 'Playlist not found', actions: [h('a.btn', { href: '#/library/playlists' }, 'Back to playlists')] }));
     const total = p.items.reduce((s, v) => s + (v.dur || 0), 0);
     body.append(h('div.row.wrap', { style: { marginBottom: '18px', gap: '12px' } },
       h('div.grow', h('h1', { contentEditable: 'plaintext-only', spellcheck: 'false', title: 'Click to rename', onblur: e => state.renamePlaylist(id, e.target.textContent), onkeydown: e => { if (e.key === 'Enter') { e.preventDefault(); e.target.blur(); } } }, p.name),
@@ -53,7 +54,7 @@ export function playlistPage(root, { id }) {
       h('button.btn', { disabled: !p.items.length, onclick: () => playItems(p.items, { shuffle: true }) }, icon('shuffle', 15), 'Shuffle'),
       h('button.btn', { disabled: !p.items.length, onclick: () => { audio.addMany(p.items); toast('Added to queue'); } }, icon('queue', 15), 'Queue'),
       h('button.btn.danger', { onclick: () => { if (confirm(`Delete “${p.name}”? The videos themselves are not affected.`)) { state.deletePlaylist(id); go('/library/playlists'); } } }, icon('trash', 15), 'Delete')));
-    if (!p.items.length) return body.append(h('div.empty', h('h2', 'This playlist is empty'), h('p', 'Open the ⋯ menu on any video and choose “Add to playlist”.')));
+    if (!p.items.length) return body.append(catPanel('emptylist', { title: 'This playlist is empty', text: 'Open the ⋯ menu on any video and choose “Add to playlist”.' }));
     body.append(h('div.list', ...p.items.map((v, i) => h('div.item.plrow', { draggable: 'true', style: { animationDelay: Math.min(i, 12) * 25 + 'ms' },
       ondragstart: e => { dragFrom = i; e.dataTransfer.effectAllowed = 'move'; }, ondragover: e => { e.preventDefault(); e.currentTarget.classList.add('over'); }, ondragleave: e => e.currentTarget.classList.remove('over'),
       ondrop: e => { e.preventDefault(); if (dragFrom >= 0) { state.movePlaylistItem(id, dragFrom, i); dragFrom = -1; } } },

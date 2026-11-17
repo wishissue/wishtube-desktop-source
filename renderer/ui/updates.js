@@ -1,4 +1,5 @@
 import { h, clear, toast, fmtBytes, fmtAgo } from './dom.js';
+import { catThumb } from './cats.js';
 import { icon } from './icons.js';
 
 /** Update checker UI. The main process checks GitHub once a day; this shows a small card when a new version exists
@@ -17,7 +18,7 @@ async function install(u, box) {
     label.textContent = p.done ? 'Installing' : p.total ? `${Math.round(pct)}% · ${fmtBytes(p.got)} of ${fmtBytes(p.total)}` : fmtBytes(p.got);
   });
   const r = await api().install(); off();
-  if (r?.error) { clear(box).append(h('b', 'Update didn’t work'), h('span.sub', r.error), h('div.row', h('button.btn.sm', { onclick: () => api().page() }, 'Open release page'), h('button.btn.sm', { onclick: closeCard }, 'Close'))); return; }
+  if (r?.error) { clear(box).append(h('div.row', { style: { gap: '12px', alignItems: 'center' } }, catThumb('update', 52), h('div', h('b', 'Update didn’t work'), h('div.sub', r.error))), h('div.row', h('button.btn.sm', { onclick: () => api().page() }, 'Open release page'), h('button.btn.sm', { onclick: closeCard }, 'Close'))); return; }
   if (r?.revealed) { clear(box).append(h('b', 'Update downloaded'), h('span.sub', 'Open the new file to finish.'), h('button.btn.sm', { onclick: closeCard }, 'Done')); return; }
   clear(box).append(h('b', 'Restarting'), h('span.sub', 'WishTube will reopen in a moment.'));
 }

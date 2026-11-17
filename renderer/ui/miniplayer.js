@@ -1,4 +1,6 @@
 import { h, clear, fmtDur } from './dom.js';
+import { wavy } from './wavy.js';
+import { catPanel } from './cats.js';
 import { icon } from './icons.js';
 import { audio } from '../core/audio.js';
 import { watchPath, creatorPath, go } from './components.js';
@@ -23,7 +25,7 @@ export function mountMiniPlayer() {
       const same = title.dataset.id === c.id; title.dataset.id = c.id;
       if (!same) { clear(art); if (c.thumb) art.append(h('img', { src: c.thumb, alt: '', onerror: e => e.target.remove() })); title.textContent = c.title; title.title = c.title; title.href = '#' + watchPath(c.albumId ? { id: c.albumId } : c); clear(sub).append(h('a', { href: '#' + creatorPath(c) }, c.creator || ''), c.album ? ' · ' + c.album : ''); }
     }
-    clear(bPlay).append(audio.loading && audio.playing === false && !audio.failed ? h('i.spin', { style: { width: '20px', height: '20px' } }) : icon(audio.playing ? 'pause' : 'play', 20));
+    clear(bPlay).append(audio.loading && audio.playing === false && !audio.failed ? wavy(20) : icon(audio.playing ? 'pause' : 'play', 20));
     bShuffle.classList.toggle('on', audio.q.shuffle); bRepeat.classList.toggle('on', audio.q.repeat !== 'off');
     clear(bRepeat).append(icon(audio.q.repeat === 'one' ? 'repeat1' : 'repeat', 19)); bRepeat.title = 'Repeat: ' + audio.q.repeat;
     bar.classList.toggle('loading', !!audio.loading); document.body.classList.toggle('audio-playing', audio.playing);
@@ -42,7 +44,7 @@ export function mountMiniPlayer() {
     document.body.append(drawer); let dragFrom = -1;
     drawQueue = () => {
       clear(list); const q = audio.q; drawer.querySelector('#qcount').textContent = q.length + (q.length === 1 ? ' track' : ' tracks');
-      if (!q.length) return list.append(h('div.empty', { style: { padding: '30px 10px' } }, h('p', 'The queue is empty. Use “Add to queue” on any video or track.')));
+      if (!q.length) return list.append(catPanel('emptylist', { size: 'sm', title: 'The queue is empty', text: 'Use “Add to queue” on any video or track.' }));
       q.items.forEach((it, i) => list.append(h('div.qitem' + (i === q.index ? '.now' : ''), { draggable: 'true', role: 'listitem',
         ondragstart: e => { dragFrom = i; e.dataTransfer.effectAllowed = 'move'; }, ondragover: e => { e.preventDefault(); e.currentTarget.classList.add('over'); }, ondragleave: e => e.currentTarget.classList.remove('over'),
         ondrop: e => { e.preventDefault(); if (dragFrom >= 0) audio.move(dragFrom, i); dragFrom = -1; }, ondblclick: () => audio.jump(i) },

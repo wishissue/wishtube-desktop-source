@@ -1,4 +1,5 @@
 import { h, clear, fmtBytes, fmtDur, toast } from './dom.js';
+import { catPanel } from './cats.js';
 import { icon } from './icons.js';
 import { state } from '../core/state.js';
 
@@ -37,7 +38,7 @@ export function downloads(root) {
   const list = h('div.list'), items = new Map(), banner = h('div'); let caps = null, off = null;
   const draw = () => {
     clear(list); const all = [...items.values()].sort((a, b) => b.created - a.created);
-    if (!all.length) return list.append(h('div.empty', h('h2', 'No downloads yet'), h('p', 'Open a video and press the download button. Pick the quality and format you want.')));
+    if (!all.length) return list.append(catPanel('nodl', { title: 'No downloads yet', text: 'Open a video and press the download button. Pick the quality and format you want.' }));
     const act = all.filter(d => !['done', 'error', 'cancelled'].includes(d.state)), past = all.filter(d => ['done', 'error', 'cancelled'].includes(d.state));
     if (act.length) list.append(h('h2.dlh', `In progress (${act.length})`), ...act.map(d => row(d, caps)));
     if (past.length) list.append(h('h2.dlh', 'History'), ...past.map(d => row(d, caps)));
@@ -73,7 +74,7 @@ export async function downloadDialog(v, stream) {
   const close = () => clear(overlay);
   const go = async (option, format) => {
     const r = await window.wt.dl.start({ videoId: v.id, title: v.title, creator: v.creator, thumb: v.thumb, dur: v.dur || stream.dur || 0, option, format });
-    if (r?.error) return toast('Couldn’t start: ' + r.error, 4000);
+    if (r?.error) return toast('Couldn’t start: ' + r.error, 4000, 'loadfail');
     close(); toast('Download started. Open Downloads to follow it.');
   };
   const vid = opts.map(o => {
@@ -87,7 +88,7 @@ export async function downloadDialog(v, stream) {
   clear(overlay).append(h('div.dlg', { role: 'dialog', 'aria-label': 'Download', onclick: e => e.stopPropagation() },
     h('div.row', h('h2.grow', 'Download'), h('button.iconbtn', { title: 'Close', onclick: close }, icon('x', 18))),
     h('p.sub.clip', v.title),
-    opts.length ? h('div', h('h3', 'Video'), h('div.dlopts', vid), h('h3', 'Audio only'), h('div.dlopts', aud)) : h('div.empty', { style: { padding: '30px 0' } }, h('p', 'This provider doesn’t offer a download for this video.')),
+    opts.length ? h('div', h('h3', 'Video'), h('div.dlopts', vid), h('h3', 'Audio only'), h('div.dlopts', aud)) : catPanel('noresults', { size: 'sm', title: 'No download available', text: 'This provider doesn’t offer a download for this video.' }),
     h('p.sub', { style: { marginTop: '12px' } }, 'Only download what you have the right to keep. Check the licence shown on the video page.')));
   overlay.onclick = close; overlay.querySelector('.dlopt:not([disabled])')?.focus();
 }

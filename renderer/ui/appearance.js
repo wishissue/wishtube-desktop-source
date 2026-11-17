@@ -40,7 +40,7 @@ async function pickBackground(onDone) {
       c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
       state.bgImage = c.toDataURL('image/jpeg', 0.86); await window.wt.set('bgimage', state.bgImage);
       S().bgMode = 'image'; save(); onDone(); toast('Background set');
-    } catch { toast('Couldn’t read that image'); }
+    } catch { toast('Couldn’t read that image', 3200, 'loadfail'); }
   };
   inp.click();
 }

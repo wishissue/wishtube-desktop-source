@@ -1,4 +1,5 @@
 import { h, clear, toast } from './dom.js';
+import { catPanel } from './cats.js';
 import { icon } from './icons.js';
 import { state } from '../core/state.js';
 import { pool } from '../rec/pool.js';
@@ -39,7 +40,10 @@ export function home(root) {
     const rankedAll = state.ranker.rank(all, { mode, follows: state.follows(), hidden: state.hidden(), seed, limit: 160 });
     if (!rankedAll.length) {
       if (pool.refreshing || !pool.t) return drawLoading();
-      body.append(h('div.empty', h('h2', mode === 'following' ? 'Nothing from your follows yet' : 'Nothing to show'), h('p', mode === 'following' ? 'Follow a creator and their videos land here.' : 'Check your connection, or loosen the filters in Settings > Feed.'), h('div.row', { style: { justifyContent: 'center', gap: '8px', marginTop: '16px' } }, h('button.btn.pri', { onclick: refresh }, 'Retry'), h('a.btn', { href: '#/settings' }, 'Feed settings')), h('div.loadbox', staticLog({ scopes: ['feed', 'net'], title: 'What happened on the last refresh' }))));
+      const acts = [h('button.btn.pri', { onclick: refresh }, 'Retry'), h('a.btn', { href: '#/settings' }, 'Feed settings')];
+      body.append(mode === 'following'
+        ? catPanel('nofollow', { title: 'Nothing from your follows yet', text: 'Follow a creator and their videos land here.', actions: acts })
+        : catPanel('nothing', { title: 'Nothing to show', text: 'Check your connection, or loosen the filters in Settings > Feed.', actions: acts }));
       return;
     }
     const why = new Map(rankedAll.map(r => [r.v.id, r.reasons]));
@@ -75,7 +79,7 @@ export function home(root) {
   async function doRefresh(forceDraw, manual) {
     let r = null, first = !pool.videos.length;
     try { r = await pool.refresh(all => { if (alive && first && all.length > 20) { first = false; pool.videos = all.slice(); draw(); } }); }
-    catch (e) { toast('Refresh failed: ' + friendly(e)); }
+    catch (e) { toast('Refresh failed: ' + friendly(e), 4000, 'loadfail'); }
     if (!alive) return;
     if (manual && r) toast(r.added ? `${r.added} new videos added to your feed` : 'Nothing new right now. Try again in a bit.');
     if (forceDraw || document.getElementById('view').scrollTop < 80) draw();
